@@ -9,13 +9,13 @@
 > <td>
 > 
 > ### ❌ OLD (This Repository)
-> `@hviana/polynomial-regression`
+> `@hviana/multivariate-convolutional-regression`
 > 
 > </td>
 > <td>
 > 
 > ### ✅ NEW (Use This Instead)
-> `@hviana/multivariate-convolutional-regression`
+> `@hviana/multivariate-ft-transformer-regression`
 > 
 > </td>
 > </tr>
