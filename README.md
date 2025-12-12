@@ -918,7 +918,7 @@ Batch Size Effects:
     └────────────────────────┴─────────────────────┘
 ```
 
-| Value      | Memory    | GPU Efficiency | Generalization |
+| Value      | Memory    | CPU Efficiency | Generalization |
 | ---------- | --------- | -------------- | -------------- |
 | **8-16**   | Low       | Low            | Excellent      |
 | **32**     | Medium    | Medium         | Very Good      |
@@ -1427,17 +1427,12 @@ for (const sample of stream) {
 ### Batch Size Optimization
 
 ```typescript
-// Larger batches = better GPU/SIMD utilization
+// Larger batches = better CPU/SIMD utilization
 // but watch memory usage
 
 // For CPU: 32-64 usually optimal
 const cpuModel = new ConvolutionalRegression({
   batchSize: 32,
-});
-
-// For GPU (if using WebGL/WebGPU backend): 128-256
-const gpuModel = new ConvolutionalRegression({
-  batchSize: 256,
 });
 ```
 
@@ -1545,10 +1540,10 @@ MIT License - feel free to use in personal and commercial projects.
 
 **Built with ❤️ for high-performance machine learning in TypeScript**
 
-[Report Bug](https://github.com/@hviana/multivariate-convolutional-regression/issues)
+[Report Bug](https://github.com/hviana/multivariate-convolutional-regression/issues)
 •
-[Request Feature](https://github.com/@hviana/multivariate-convolutional-regression/issues)
+[Request Feature](https://github.com/hviana/multivariate-convolutional-regression/issues)
 •
-[Contribute](https://github.com/@hviana/multivariate-convolutional-regression/pulls)
+[Contribute](https://github.com/hviana/multivariate-convolutional-regression/pulls)
 
 </div>
