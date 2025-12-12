@@ -1,0 +1,5 @@
+{
+  "name": "@hviana/multivariate-convolutional-regression",
+  "version": "1.0.0",
+  "exports": "./mod.ts"
+}
