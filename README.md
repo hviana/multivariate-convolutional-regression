@@ -1,27 +1,13 @@
-Model: # 🧠 ConvolutionalRegression
+Model: # 🧠 Multivariate Convolutional Regression
 
 <div align="center">
 
-```
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                                                                           ║
-║     ██████╗ ██████╗ ███╗   ██╗██╗   ██╗ ██████╗ ██╗     ██╗   ██╗████████╗║
-║    ██╔════╝██╔═══██╗████╗  ██║██║   ██║██╔═══██╗██║     ██║   ██║╚══██╔══╝║
-║    ██║     ██║   ██║██╔██╗ ██║██║   ██║██║   ██║██║     ██║   ██║   ██║   ║
-║    ██║     ██║   ██║██║╚██╗██║╚██╗ ██╔╝██║   ██║██║     ██║   ██║   ██║   ║
-║    ╚██████╗╚██████╔╝██║ ╚████║ ╚████╔╝ ╚██████╔╝███████╗╚██████╔╝   ██║   ║
-║     ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝  ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   ║
-║                                                                           ║
-║             🔮 REGRESSION • 🌊 ONLINE LEARNING • ⚡ ADAM                   ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-```
+**A powerful Convolutional Neural Network library for Multivariate Regression
+with Incremental Online Learning**
 
-**A powerful 1D Convolutional Neural Network for Multivariate Regression with
-Incremental Online Learning**
-
-[Features](#-features) • [Quick Start](#-quick-start) • [API](#-api-reference) •
-[Examples](#-examples) • [Parameters](#-parameter-optimization-guide)
+[📦 JSR Package](https://jsr.io/@hviana/multivariate-convolutional-regression) •
+[🐙 GitHub](https://github.com/hviana/polynomial-regression) •
+[👤 Author: Henrique Emanoel Viana](#-author)
 
 </div>
 
@@ -29,71 +15,67 @@ Incremental Online Learning**
 
 ## 📑 Table of Contents
 
-<details>
-<summary>Click to expand</summary>
-
-- [🌟 Features](#-features)
+- [✨ Features](#-features)
 - [🚀 Quick Start](#-quick-start)
 - [🏗️ Architecture](#️-architecture)
-- [📚 API Reference](#-api-reference)
-  - [Configuration](#configuration)
-  - [Methods](#methods)
-  - [Interfaces](#interfaces)
-- [⚙️ Parameter Optimization Guide](#️-parameter-optimization-guide)
-- [📊 Examples](#-examples)
-- [🔬 Mathematical Background](#-mathematical-background)
-- [🎯 Use Cases](#-use-cases)
-- [❓ FAQ](#-faq)
-- [🤝 Contributing](#-contributing)
-
-</details>
+- [⚙️ Configuration Parameters](#️-configuration-parameters)
+- [📖 API Reference](#-api-reference)
+- [🎯 Optimization Guide](#-optimization-guide)
+- [💡 Use Case Examples](#-use-case-examples)
+- [🔧 Advanced Topics](#-advanced-topics)
+- [📄 License](#-license)
 
 ---
 
-## 🌟 Features
+## ✨ Features
 
-<table>
-<tr>
-<td width="50%">
-
-### 🧬 Core Capabilities
-
-| Feature                 | Description                           |
-| ----------------------- | ------------------------------------- |
-| 🔄 **Online Learning**  | Train incrementally on streaming data |
-| 🎯 **Multivariate I/O** | Handle multiple inputs and outputs    |
-| 📈 **Auto-scaling**     | Automatic Z-score normalization       |
-| 🛡️ **Drift Detection**  | ADWIN algorithm for concept drift     |
-
-</td>
-<td width="50%">
-
-### ⚡ Optimizations
-
-| Feature                  | Description                     |
-| ------------------------ | ------------------------------- |
-| 🚀 **Adam Optimizer**    | Adaptive learning with momentum |
-| 📉 **LR Scheduling**     | Warmup + Cosine decay           |
-| 🔒 **L2 Regularization** | Built-in overfitting prevention |
-| 🎲 **Outlier Detection** | Z-score based anomaly filtering |
-
-</td>
-</tr>
-</table>
-
-### 🎨 Feature Highlights
+<div align="center">
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│   ✅ Zero Dependencies      ✅ TypeScript Native    ✅ Memory Efficient │
-│   ✅ Confidence Intervals   ✅ Save/Load State      ✅ Auto Initialization│
-│   ✅ He Weight Init         ✅ Welford's Algorithm  ✅ Buffer Pooling    │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    🌟 CORE CAPABILITIES 🌟                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  🔄 Online Learning      │  📊 Multi-Output       │  🎯 Uncertainty Est.    │
+│  Stream data in real-    │  Handle multiple       │  95% confidence         │
+│  time, no batching       │  target variables      │  intervals included     │
+├──────────────────────────┼────────────────────────┼─────────────────────────┤
+│  🛡️ Outlier Detection    │  📈 Drift Detection    │  💾 Full Serialization  │
+│  Auto-downweight         │  ADWIN algorithm       │  Save/load complete     │
+│  anomalous samples       │  detects changes       │  model state            │
+├──────────────────────────┼────────────────────────┼─────────────────────────┤
+│  ⚡ Adam Optimizer       │  📉 Learning Schedule  │  🔢 Z-Score Norm        │
+│  Adaptive learning       │  Cosine warmup &       │  Welford's online       │
+│  with momentum           │  decay strategy        │  statistics             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+</div>
+
+### Feature Breakdown
+
+| Feature                            | Description                           | Benefit                             |
+| ---------------------------------- | ------------------------------------- | ----------------------------------- |
+| 🔄 **Incremental Online Learning** | Process samples one at a time         | Memory efficient, real-time updates |
+| 🧮 **Convolutional Architecture**  | 1D convolutions extract patterns      | Captures local dependencies in data |
+| 📊 **Multivariate Support**        | Multiple inputs → Multiple outputs    | Complex relationship modeling       |
+| ⚡ **Adam Optimizer**              | Adaptive learning rates per parameter | Faster convergence, stable training |
+| 📉 **Cosine Warmup Schedule**      | Gradual LR increase then decay        | Prevents early divergence           |
+| 🔢 **Welford's Algorithm**         | Online mean/variance computation      | Numerically stable normalization    |
+| 🛡️ **Outlier Detection**           | Z-score based anomaly detection       | Robust to noisy data                |
+| 📈 **ADWIN Drift Detection**       | Adaptive windowing algorithm          | Handles concept drift               |
+| 🎯 **Uncertainty Estimation**      | Confidence intervals on predictions   | Quantified prediction reliability   |
+| 🔒 **L2 Regularization**           | Weight decay penalty                  | Prevents overfitting                |
+
+---
 
 ## 🚀 Quick Start
+
+### Installation
+
+```typescript
+// JSR
+import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
+```
 
 ### Basic Usage
 
@@ -101,317 +83,844 @@ Incremental Online Learning**
 import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
 
 // 1️⃣ Create model instance
-const model = new ConvolutionalRegression({
-  hiddenLayers: 2,
-  convolutionsPerLayer: 32,
-  learningRate: 0.001,
-});
+const model = new ConvolutionalRegression();
 
-// 2️⃣ Train incrementally with data
+// 2️⃣ Train with streaming data
 const result = model.fitOnline({
-  xCoordinates: [[1, 2, 3, 4, 5]],
-  yCoordinates: [[6, 7]],
+  xCoordinates: [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+  yCoordinates: [[10, 20], [30, 40], [50, 60]],
 });
 
-console.log(`📊 Loss: ${result.loss.toFixed(4)}`);
-console.log(`📈 Converged: ${result.converged}`);
+console.log(`📉 Loss: ${result.loss.toFixed(4)}`);
+console.log(`✅ Converged: ${result.converged}`);
 
 // 3️⃣ Make predictions
-const predictions = model.predict(3);
+const predictions = model.predict(5);
 
-predictions.predictions.forEach((pred, i) => {
+for (const pred of predictions.predictions) {
   console.log(
-    `🔮 Step ${i + 1}: ${pred.predicted.map((v) => v.toFixed(2)).join(", ")}`,
+    `🎯 Predicted: [${pred.predicted.map((v) => v.toFixed(2)).join(", ")}]`,
   );
   console.log(
-    `   95% CI: [${pred.lowerBound.map((v) => v.toFixed(2)).join(", ")}] - [${
+    `📊 95% CI: [${pred.lowerBound.map((v) => v.toFixed(2)).join(", ")}] - [${
       pred.upperBound.map((v) => v.toFixed(2)).join(", ")
     }]`,
   );
-});
-```
-
-### 📋 Output Example
-
-```
-📊 Loss: 0.4523
-📈 Converged: false
-🔮 Step 1: 6.12, 7.08
-   95% CI: [5.82, 6.78] - [6.42, 7.38]
-🔮 Step 2: 6.25, 7.15
-   95% CI: [5.89, 6.75] - [6.61, 7.55]
-🔮 Step 3: 6.31, 7.22
-   95% CI: [5.88, 6.68] - [6.74, 7.76]
+}
 ```
 
 ---
 
 ## 🏗️ Architecture
 
-### Network Structure
+### Neural Network Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          CONVOLUTIONAL REGRESSION NETWORK                        │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                  │
-│   ┌─────────┐    ┌─────────────────┐         ┌─────────────────┐   ┌─────────┐ │
-│   │  INPUT  │    │   CONV BLOCK 1  │   ...   │   CONV BLOCK N  │   │ OUTPUT  │ │
-│   │         │    │                 │         │                 │   │         │ │
-│   │ (d_in)  │───▶│  Conv1D + ReLU  │────────▶│  Conv1D + ReLU  │──▶│ DENSE   │ │
-│   │         │    │                 │         │                 │   │         │ │
-│   │ [1×d]   │    │  [f×d] filters  │         │  [f×d] filters  │   │ (d_out) │ │
-│   └─────────┘    └─────────────────┘         └─────────────────┘   └─────────┘ │
-│                                                                                  │
-│   Legend: d_in = input dim, d = spatial dim, f = filters, d_out = output dim    │
-│                                                                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         NETWORK ARCHITECTURE                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    INPUT                CONVOLUTIONAL LAYERS                    OUTPUT
+  (Features)           (Pattern Extraction)                   (Predictions)
+
+ ┌─────────┐      ┌─────────────────────────┐      ┌─────────────────────────┐
+ │         │      │   Conv1D + ReLU (×N)    │      │                         │
+ │  x₁     │      │  ┌─────┐    ┌─────┐     │      │                         │
+ │  x₂     │──────│  │Conv │────│ReLU │     │      │      ┌─────────┐        │
+ │  x₃     │      │  │ 1D  │    │     │     │──────│──────│  Dense  │────────│──► ŷ₁, ŷ₂, ...
+ │  ...    │      │  └─────┘    └─────┘     │      │      │  Layer  │        │
+ │  xₙ     │      │       ×hiddenLayers     │      │      └─────────┘        │
+ │         │      │                         │      │                         │
+ └─────────┘      └─────────────────────────┘      └─────────────────────────┘
+      │                      │                               │
+      ▼                      ▼                               ▼
+  Z-Score              He Init +                      Linear Output
+  Normalize            Same Padding                   + Denormalize
 ```
 
-### Data Flow Diagram
+### Data Flow Pipeline
 
 ```
-                          TRAINING PIPELINE
-┌────────────────────────────────────────────────────────────────────┐
-│                                                                    │
-│   ┌────────┐   ┌────────────┐   ┌──────────┐   ┌───────────────┐  │
-│   │  Raw   │   │  Welford   │   │   Z-Score │   │   Forward    │  │
-│   │  Data  │──▶│  Update    │──▶│ Normalize │──▶│    Pass      │  │
-│   └────────┘   └────────────┘   └──────────┘   └───────┬───────┘  │
-│                                                        │          │
-│                                                        ▼          │
-│   ┌────────┐   ┌────────────┐   ┌──────────┐   ┌───────────────┐  │
-│   │ Update │   │    Adam    │   │ Backward │   │   Compute    │  │
-│   │Weights │◀──│  Optimizer │◀──│   Pass   │◀──│    Loss      │  │
-│   └────────┘   └────────────┘   └──────────┘   └───────────────┘  │
-│        │                                                          │
-│        ▼                                                          │
-│   ┌────────────────────────────────────────────────────────┐     │
-│   │               ADWIN Drift Detection                    │     │
-│   │         (Monitor loss distribution changes)            │     │
-│   └────────────────────────────────────────────────────────┘     │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            TRAINING PIPELINE                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+  │  Raw    │    │   Welford    │    │   Forward    │    │    Loss      │
+  │  Data   │───▶│   Z-Score    │───▶│    Pass      │───▶│  Compute     │
+  │ (x, y)  │    │   Normalize  │    │              │    │   (MSE)      │
+  └─────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+                                                                │
+       ┌────────────────────────────────────────────────────────┘
+       │
+       ▼
+  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+  │   Outlier    │    │   Backward   │    │    Adam      │    │    ADWIN     │
+  │   Check &    │───▶│    Pass      │───▶│   Update     │───▶│    Drift     │
+  │  Downweight  │    │  (Gradients) │    │  (Weights)   │    │   Detection  │
+  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
-### Convolution Operation
+### Mathematical Foundations
+
+#### Conv1D Operation
 
 ```
-                    1D CONVOLUTION WITH SAME PADDING
+y[c, i] = Σₖ Σⱼ W[c, k, j] · x[k, i + j - pad] + b[c]
+```
 
-  Input (1 channel)          Kernel (k=3)           Output (1 filter)
-┌─────────────────┐        ┌───────────┐         ┌─────────────────┐
-│ x₀ x₁ x₂ x₃ x₄ │   *    │ w₀ w₁ w₂ │    =    │ y₀ y₁ y₂ y₃ y₄ │
-└─────────────────┘        └───────────┘         └─────────────────┘
+#### ReLU Activation
 
-Formula: y[i] = Σₖ (w[k] · x[i+k-pad]) + bias
+```
+f(x) = max(0, x)
+```
 
-Padding: pad = ⌊kernel_size / 2⌋ (same padding preserves spatial dims)
+#### Adam Optimizer Update Rules
+
+```
+m = β₁·m + (1-β₁)·g           # First moment estimate
+v = β₂·v + (1-β₂)·g²          # Second moment estimate
+m̂ = m / (1-β₁ᵗ)               # Bias-corrected first moment
+v̂ = v / (1-β₂ᵗ)               # Bias-corrected second moment
+W = W - η·m̂ / (√v̂ + ε)        # Parameter update
+```
+
+#### Learning Rate Schedule
+
+```
+Warmup (t ≤ warmupSteps):
+    lr = baseLR × (t / warmupSteps)
+
+Cosine Decay (t > warmupSteps):
+    progress = (t - warmupSteps) / (totalSteps - warmupSteps)
+    lr = baseLR × 0.5 × (1 + cos(π × progress))
 ```
 
 ---
 
-## 📚 API Reference
+## ⚙️ Configuration Parameters
 
-### Configuration
-
-#### `ConvolutionalRegressionConfig`
-
-Create a model with custom configuration:
+### Complete Configuration Interface
 
 ```typescript
-const model = new ConvolutionalRegression({
-  // Architecture
-  hiddenLayers: 2, // Number of conv layers (1-10)
-  convolutionsPerLayer: 32, // Filters per layer (1-256)
-  kernelSize: 3, // Convolution kernel size
+interface ConvolutionalRegressionConfig {
+  hiddenLayers?: number; // Default: 2
+  convolutionsPerLayer?: number; // Default: 32
+  kernelSize?: number; // Default: 3
+  learningRate?: number; // Default: 0.001
+  warmupSteps?: number; // Default: 100
+  totalSteps?: number; // Default: 10000
+  beta1?: number; // Default: 0.9
+  beta2?: number; // Default: 0.999
+  epsilon?: number; // Default: 1e-8
+  regularizationStrength?: number; // Default: 1e-4
+  convergenceThreshold?: number; // Default: 1e-6
+  outlierThreshold?: number; // Default: 3.0
+  adwinDelta?: number; // Default: 0.002
+}
+```
 
-  // Learning Rate
-  learningRate: 0.001, // Base learning rate
-  warmupSteps: 100, // Linear warmup steps
-  totalSteps: 10000, // Total steps for cosine decay
+---
 
-  // Adam Optimizer
-  beta1: 0.9, // First moment decay
-  beta2: 0.999, // Second moment decay
-  epsilon: 1e-8, // Numerical stability
+### 🔷 Network Architecture Parameters
 
-  // Regularization
-  regularizationStrength: 1e-4, // L2 regularization λ
+#### `hiddenLayers`
 
-  // Convergence
-  convergenceThreshold: 1e-6, // Loss threshold
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>2</td></tr>
+<tr><td><b>Range</b></td><td>1 - 10</td></tr>
+</table>
 
-  // Outlier Detection
-  outlierThreshold: 3.0, // Z-score threshold
+**Description:** Number of convolutional hidden layers in the network.
 
-  // Drift Detection
-  adwinDelta: 0.002, // ADWIN confidence parameter
+```
+hiddenLayers = 1:     Input → [Conv+ReLU] → Dense → Output
+hiddenLayers = 2:     Input → [Conv+ReLU] → [Conv+ReLU] → Dense → Output
+hiddenLayers = 3:     Input → [Conv+ReLU]×3 → Dense → Output
+```
+
+**🎯 Optimization Guide:**
+
+| Scenario                    | Recommended Value | Reasoning                       |
+| --------------------------- | ----------------- | ------------------------------- |
+| Simple linear relationships | 1                 | Minimal complexity needed       |
+| Standard regression tasks   | 2                 | Good balance of capacity/speed  |
+| Complex nonlinear patterns  | 3-4               | More representation power       |
+| Very high-dimensional data  | 4-6               | Hierarchical feature extraction |
+
+```typescript
+// Simple data pattern
+const simpleModel = new ConvolutionalRegression({ hiddenLayers: 1 });
+
+// Complex multi-scale patterns
+const complexModel = new ConvolutionalRegression({ hiddenLayers: 4 });
+```
+
+---
+
+#### `convolutionsPerLayer`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>32</td></tr>
+<tr><td><b>Range</b></td><td>8 - 256</td></tr>
+</table>
+
+**Description:** Number of output channels (filters) per convolutional layer.
+
+```
+                     convolutionsPerLayer = 16
+                    ┌────────────────────────┐
+    1 channel  ────▶│  16 learnable filters  │────▶  16 channels
+                    └────────────────────────┘
+
+                     convolutionsPerLayer = 64
+                    ┌────────────────────────┐
+    1 channel  ────▶│  64 learnable filters  │────▶  64 channels
+                    └────────────────────────┘
+```
+
+**🎯 Optimization Guide:**
+
+| Data Complexity            | Recommended Value | Total Parameters Impact |
+| -------------------------- | ----------------- | ----------------------- |
+| Low (< 10 features)        | 8-16              | ~500-2,000              |
+| Medium (10-50 features)    | 32                | ~5,000-20,000           |
+| High (50-200 features)     | 64-128            | ~50,000-200,000         |
+| Very High (> 200 features) | 128-256           | ~200,000+               |
+
+```typescript
+// Lightweight model for simple patterns
+const lightModel = new ConvolutionalRegression({
+  convolutionsPerLayer: 16,
+});
+
+// Heavy model for complex patterns
+const heavyModel = new ConvolutionalRegression({
+  convolutionsPerLayer: 128,
 });
 ```
 
-#### Configuration Parameters Table
+---
 
-| Parameter                | Type     | Default | Range   | Description                     |
-| ------------------------ | -------- | ------- | ------- | ------------------------------- |
-| `hiddenLayers`           | `number` | `2`     | `1-10`  | Number of convolutional layers  |
-| `convolutionsPerLayer`   | `number` | `32`    | `1-256` | Filters per convolutional layer |
-| `kernelSize`             | `number` | `3`     | `≥1`    | Size of convolution kernel      |
-| `learningRate`           | `number` | `0.001` | `>0`    | Base learning rate for Adam     |
-| `warmupSteps`            | `number` | `100`   | `≥0`    | Steps for linear LR warmup      |
-| `totalSteps`             | `number` | `10000` | `≥1`    | Total steps for cosine decay    |
-| `beta1`                  | `number` | `0.9`   | `[0,1)` | Adam first moment decay         |
-| `beta2`                  | `number` | `0.999` | `[0,1)` | Adam second moment decay        |
-| `epsilon`                | `number` | `1e-8`  | `>0`    | Adam numerical stability        |
-| `regularizationStrength` | `number` | `1e-4`  | `≥0`    | L2 regularization strength      |
-| `convergenceThreshold`   | `number` | `1e-6`  | `>0`    | Loss convergence threshold      |
-| `outlierThreshold`       | `number` | `3.0`   | `>0`    | Z-score outlier threshold       |
-| `adwinDelta`             | `number` | `0.002` | `(0,1)` | ADWIN confidence delta          |
+#### `kernelSize`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>3</td></tr>
+<tr><td><b>Range</b></td><td>1 - 11 (odd numbers)</td></tr>
+</table>
+
+**Description:** Size of the convolutional kernel (receptive field).
+
+```
+kernelSize = 3:                kernelSize = 5:                kernelSize = 7:
+┌───┬───┬───┐                  ┌───┬───┬───┬───┬───┐          ┌───┬───┬───┬───┬───┬───┬───┐
+│ w₁│ w₂│ w₃│                  │w₁ │w₂ │w₃ │w₄ │w₅ │          │w₁ │w₂ │w₃ │w₄ │w₅ │w₆ │w₇ │
+└───┴───┴───┘                  └───┴───┴───┴───┴───┘          └───┴───┴───┴───┴───┴───┴───┘
+Local patterns                 Medium-range patterns          Long-range patterns
+```
+
+**🎯 Optimization Guide:**
+
+| Pattern Type            | Recommended Value | Use Case                      |
+| ----------------------- | ----------------- | ----------------------------- |
+| Very local dependencies | 1                 | Point-wise transformations    |
+| Local patterns          | 3                 | Most regression tasks         |
+| Medium-range patterns   | 5                 | Time series with short trends |
+| Long-range patterns     | 7-11              | Seasonal or cyclic data       |
+
+```typescript
+// Local feature extraction
+const localModel = new ConvolutionalRegression({ kernelSize: 3 });
+
+// Capture longer-range dependencies
+const wideModel = new ConvolutionalRegression({ kernelSize: 7 });
+```
 
 ---
 
-### Methods
+### 🔷 Optimizer Parameters
 
-#### 🎓 `fitOnline(data)`
+#### `learningRate`
 
-Performs incremental online training with a single batch of data.
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>0.001</td></tr>
+<tr><td><b>Range</b></td><td>1e-5 - 0.1</td></tr>
+</table>
+
+**Description:** Base learning rate for the Adam optimizer.
+
+```
+Learning Rate Effect:
+                        
+     High LR (0.01)     │    Medium LR (0.001)   │    Low LR (0.0001)
+     ⚡ Fast but risky   │    ✅ Balanced          │    🐢 Slow but stable
+                        │                        │
+         ╱╲             │         ╲              │              
+        ╱  ╲            │          ╲             │           ╲
+       ╱    ╲           │           ╲            │            ╲
+      ╱      ╲──Loss    │            ╲───Loss    │             ╲───Loss
+     ╱        ╲         │             ╲          │              ╲
+────────────────────    │─────────────────────   │──────────────────────
+     May overshoot      │    Converges well      │    Very slow progress
+```
+
+**🎯 Optimization Guide:**
+
+| Scenario            | Recommended Value | Notes                         |
+| ------------------- | ----------------- | ----------------------------- |
+| Initial experiments | 0.001             | Start here for most cases     |
+| Large datasets      | 0.0001 - 0.001    | More samples = lower LR       |
+| Small datasets      | 0.001 - 0.01      | Fewer samples = can be higher |
+| Fine-tuning         | 0.0001 - 0.0005   | After initial training        |
+| Unstable training   | 0.0001            | If loss is oscillating        |
 
 ```typescript
-fitOnline(data: {
-  xCoordinates: number[][],
-  yCoordinates: number[][]
+// Standard training
+const standardModel = new ConvolutionalRegression({ learningRate: 0.001 });
+
+// Conservative training for sensitive data
+const conservativeModel = new ConvolutionalRegression({ learningRate: 0.0001 });
+
+// Aggressive training for quick experiments
+const aggressiveModel = new ConvolutionalRegression({ learningRate: 0.005 });
+```
+
+---
+
+#### `warmupSteps`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>100</td></tr>
+<tr><td><b>Range</b></td><td>0 - 1000</td></tr>
+</table>
+
+**Description:** Number of steps for linear learning rate warmup.
+
+```
+Learning Rate Schedule with Warmup:
+
+     lr
+      │
+  max │                    ╭─────────────────╮
+      │                 ╱                     ╲
+      │              ╱                          ╲
+      │           ╱                               ╲
+      │        ╱                                    ╲
+      │     ╱                                         ╲
+  0   │__╱____________________________________________╲___
+      │
+      └───────┬────────────────────────────────────────────▶ steps
+              │
+         warmupSteps
+```
+
+**🎯 Optimization Guide:**
+
+| Dataset Size       | Recommended Value | Reasoning                     |
+| ------------------ | ----------------- | ----------------------------- |
+| < 100 samples      | 10-20             | Quick warmup, limited data    |
+| 100-1000 samples   | 50-100            | Standard warmup               |
+| 1000-10000 samples | 100-200           | Moderate warmup               |
+| > 10000 samples    | 200-500           | Extended warmup for stability |
+
+```typescript
+// Quick warmup for small datasets
+const quickWarmup = new ConvolutionalRegression({ warmupSteps: 20 });
+
+// Extended warmup for large datasets
+const extendedWarmup = new ConvolutionalRegression({ warmupSteps: 300 });
+```
+
+---
+
+#### `totalSteps`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>10000</td></tr>
+<tr><td><b>Range</b></td><td>1000 - 1000000</td></tr>
+</table>
+
+**Description:** Total training steps for cosine decay schedule.
+
+```
+Effect of totalSteps on Learning Rate Decay:
+
+totalSteps = 5000          totalSteps = 10000         totalSteps = 50000
+   (Fast decay)               (Standard)               (Slow decay)
+
+lr│  ╲                     lr│     ╲                  lr│          ╲
+  │   ╲                      │      ╲                   │           ╲
+  │    ╲                     │       ╲                  │            ╲
+  │     ╲                    │        ╲                 │             ╲
+  │      ╲                   │         ╲                │              ╲
+  └───────────▶ steps        └────────────▶ steps      └────────────────▶ steps
+```
+
+**🎯 Optimization Guide:**
+
+| Training Duration   | Recommended Value | Use Case                 |
+| ------------------- | ----------------- | ------------------------ |
+| Short experiments   | 1000-5000         | Quick prototyping        |
+| Standard training   | 10000             | Most applications        |
+| Long training       | 50000-100000      | Complex models           |
+| Continuous learning | 100000+           | Streaming data scenarios |
+
+```typescript
+// Quick experiment
+const quickModel = new ConvolutionalRegression({ totalSteps: 2000 });
+
+// Long training for complex patterns
+const longModel = new ConvolutionalRegression({ totalSteps: 50000 });
+```
+
+---
+
+#### `beta1` & `beta2`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Defaults</b></td><td>β₁ = 0.9, β₂ = 0.999</td></tr>
+<tr><td><b>Range</b></td><td>0.0 - 0.9999</td></tr>
+</table>
+
+**Description:** Exponential decay rates for Adam's moment estimates.
+
+```
+β₁ (First Moment - Momentum):
+    Controls how much past gradients influence current direction
+    Higher β₁ → More momentum → Smoother updates
+
+β₂ (Second Moment - RMSprop):
+    Controls adaptive learning rate per parameter
+    Higher β₂ → More stable → Slower adaptation
+```
+
+**🎯 Optimization Guide:**
+
+| Scenario           | β₁   | β₂     | Notes                       |
+| ------------------ | ---- | ------ | --------------------------- |
+| Standard (default) | 0.9  | 0.999  | Works for most cases        |
+| Noisy gradients    | 0.9  | 0.9999 | More gradient smoothing     |
+| Sparse features    | 0.95 | 0.999  | Higher momentum             |
+| Fast adaptation    | 0.8  | 0.99   | Quicker response to changes |
+
+```typescript
+// Standard Adam
+const standardAdam = new ConvolutionalRegression({
+  beta1: 0.9,
+  beta2: 0.999,
+});
+
+// More aggressive adaptation
+const aggressiveAdam = new ConvolutionalRegression({
+  beta1: 0.8,
+  beta2: 0.99,
+});
+```
+
+---
+
+#### `epsilon`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>1e-8</td></tr>
+<tr><td><b>Range</b></td><td>1e-10 - 1e-4</td></tr>
+</table>
+
+**Description:** Numerical stability constant to prevent division by zero.
+
+```
+Adam Update: W -= η·m̂ / (√v̂ + ε)
+                              ↑
+                     Prevents division by zero
+                     when v̂ is very small
+```
+
+**🎯 Optimization Guide:**
+
+| Scenario             | Recommended Value | Notes                 |
+| -------------------- | ----------------- | --------------------- |
+| Standard             | 1e-8              | Default, works well   |
+| Mixed precision      | 1e-4              | Prevents underflow    |
+| Very small gradients | 1e-10             | More precision needed |
+
+---
+
+### 🔷 Regularization Parameters
+
+#### `regularizationStrength`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>1e-4</td></tr>
+<tr><td><b>Range</b></td><td>0 - 0.1</td></tr>
+</table>
+
+**Description:** L2 regularization (weight decay) strength.
+
+```
+Loss = MSE + (λ/2)·‖W‖²
+               ↑
+       regularizationStrength
+
+Effect on Weights:
+┌────────────────────────────────────────────────────────┐
+│  λ = 0 (No reg.)    │  λ = 1e-4 (Light)  │  λ = 1e-2 (Heavy) │
+│  Weights can grow   │  Gentle constraint │  Strong shrinkage │
+│  unbounded          │  on weight size    │  towards zero     │
+└────────────────────────────────────────────────────────┘
+```
+
+**🎯 Optimization Guide:**
+
+| Scenario             | Recommended Value | Effect                |
+| -------------------- | ----------------- | --------------------- |
+| No regularization    | 0                 | Might overfit         |
+| Light regularization | 1e-5 - 1e-4       | Subtle weight control |
+| Standard             | 1e-4              | Good balance          |
+| Heavy regularization | 1e-3 - 1e-2       | Prevents overfitting  |
+| Very heavy           | 0.1               | Underfitting risk     |
+
+```typescript
+// No regularization (for very clean data)
+const noReg = new ConvolutionalRegression({ regularizationStrength: 0 });
+
+// Strong regularization (for noisy data or small datasets)
+const strongReg = new ConvolutionalRegression({ regularizationStrength: 0.01 });
+```
+
+---
+
+### 🔷 Convergence & Detection Parameters
+
+#### `convergenceThreshold`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>1e-6</td></tr>
+<tr><td><b>Range</b></td><td>1e-10 - 1e-3</td></tr>
+</table>
+
+**Description:** Gradient L2 norm threshold for declaring convergence.
+
+```
+Convergence Check:
+    ‖∇L‖₂ < convergenceThreshold  →  converged = true
+
+Gradient Norm over Training:
+    │
+    │╲
+    │ ╲
+    │  ╲
+    │   ╲__
+    │      ╲__
+────┼─────────────────────────  ← convergenceThreshold
+    │            ╲____
+    │                 ╲_______
+    └──────────────────────────▶
+                                  time
+```
+
+**🎯 Optimization Guide:**
+
+| Precision Need | Recommended Value | Training Time           |
+| -------------- | ----------------- | ----------------------- |
+| Quick training | 1e-4              | Faster, less precise    |
+| Standard       | 1e-6              | Balanced                |
+| High precision | 1e-8              | Slower, more accurate   |
+| Research-grade | 1e-10             | Very slow, very precise |
+
+```typescript
+// Quick convergence for prototyping
+const quickConverge = new ConvolutionalRegression({
+  convergenceThreshold: 1e-4,
+});
+
+// Strict convergence for production
+const strictConverge = new ConvolutionalRegression({
+  convergenceThreshold: 1e-8,
+});
+```
+
+---
+
+#### `outlierThreshold`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>3.0</td></tr>
+<tr><td><b>Range</b></td><td>1.5 - 5.0</td></tr>
+</table>
+
+**Description:** Z-score threshold for outlier detection and downweighting.
+
+```
+Outlier Detection:
+    z = |y - ŷ| / σ
+    
+    if z > outlierThreshold:
+        sample_weight = 0.1  (downweighted)
+    else:
+        sample_weight = 1.0  (normal)
+
+Distribution of Z-scores:
+                    
+    │        ╭─────╮        
+    │      ╱         ╲      
+    │    ╱             ╲    
+    │  ╱                 ╲  
+    │╱                     ╲
+────┼───────────────────────────
+   -3σ   -2σ   -1σ    0   +1σ   +2σ   +3σ
+    │                              │     │
+    └──────────── Normal ──────────┘     │
+                                  Outlier Zone
+```
+
+**🎯 Optimization Guide:**
+
+| Data Quality    | Recommended Value | Detection Rate             |
+| --------------- | ----------------- | -------------------------- |
+| Very clean data | 4.0-5.0           | Very few outliers detected |
+| Standard data   | 3.0               | ~0.3% flagged as outliers  |
+| Noisy data      | 2.5               | ~1.2% flagged              |
+| Very noisy      | 2.0               | ~4.5% flagged              |
+
+```typescript
+// Sensitive to outliers (clean data expected)
+const sensitiveModel = new ConvolutionalRegression({ outlierThreshold: 4.0 });
+
+// Robust to outliers (noisy data)
+const robustModel = new ConvolutionalRegression({ outlierThreshold: 2.5 });
+```
+
+---
+
+#### `adwinDelta`
+
+<table>
+<tr><td><b>Type</b></td><td>number</td></tr>
+<tr><td><b>Default</b></td><td>0.002</td></tr>
+<tr><td><b>Range</b></td><td>0.0001 - 0.1</td></tr>
+</table>
+
+**Description:** ADWIN algorithm confidence parameter for drift detection.
+
+```
+ADWIN Drift Detection:
+
+                    Window of recent losses
+    ┌─────────────────────────────────────────────────┐
+    │  μ₀ (old mean)   │   μ₁ (new mean)             │
+    │     = 0.05       │      = 0.15                 │
+    └─────────────────────────────────────────────────┘
+                       ↑
+                    Split point
+
+    Drift detected if: |μ₀ - μ₁| ≥ √((1/2m)·ln(4n/δ))
+                                              ↑
+                                         adwinDelta
+```
+
+**🎯 Optimization Guide:**
+
+| Sensitivity       | Recommended Value | Drift Detection       |
+| ----------------- | ----------------- | --------------------- |
+| Very sensitive    | 0.0001            | Detects small changes |
+| Standard          | 0.002             | Balanced detection    |
+| Conservative      | 0.01              | Only major drifts     |
+| Very conservative | 0.1               | Very few false alarms |
+
+```typescript
+// Sensitive drift detection
+const sensitiveDrift = new ConvolutionalRegression({ adwinDelta: 0.0005 });
+
+// Conservative drift detection
+const conservativeDrift = new ConvolutionalRegression({ adwinDelta: 0.01 });
+```
+
+---
+
+## 📖 API Reference
+
+### Constructor
+
+```typescript
+new ConvolutionalRegression(config?: ConvolutionalRegressionConfig)
+```
+
+### Methods Overview
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                            PUBLIC METHODS                                  │
+├───────────────────────────────────────────────────────────────────────────┤
+│                                                                           │
+│  📊 Training                                                              │
+│  ├── fitOnline(data)           Train incrementally on new samples        │
+│  │                                                                        │
+│  🔮 Prediction                                                            │
+│  ├── predict(steps)            Generate future predictions               │
+│  │                                                                        │
+│  📈 Inspection                                                            │
+│  ├── getModelSummary()         Get architecture & training summary       │
+│  ├── getWeights()              Get all weights & optimizer state         │
+│  ├── getNormalizationStats()   Get mean/std statistics                   │
+│  │                                                                        │
+│  💾 Persistence                                                           │
+│  ├── save()                    Serialize model to JSON string            │
+│  ├── load(json)                Restore model from JSON string            │
+│  │                                                                        │
+│  🔄 Management                                                            │
+│  └── reset()                   Clear all state, reinitialize            │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### `fitOnline(data)`
+
+Train the model incrementally with new samples.
+
+**Signature:**
+
+```typescript
+fitOnline(data: { 
+    xCoordinates: number[][], 
+    yCoordinates: number[][] 
 }): FitResult
 ```
 
 **Parameters:**
 
-| Name                | Type         | Description                        |
-| ------------------- | ------------ | ---------------------------------- |
-| `data.xCoordinates` | `number[][]` | Input features `[batch][features]` |
-| `data.yCoordinates` | `number[][]` | Target outputs `[batch][outputs]`  |
+| Parameter      | Type         | Description             |
+| -------------- | ------------ | ----------------------- |
+| `xCoordinates` | `number[][]` | Array of input vectors  |
+| `yCoordinates` | `number[][]` | Array of target vectors |
 
-**Returns:** `FitResult`
+**Returns: `FitResult`**
 
 ```typescript
 interface FitResult {
-  loss: number; // Current loss value
+  loss: number; // MSE loss for this batch
   gradientNorm: number; // L2 norm of gradients
-  effectiveLearningRate: number; // Current learning rate
-  isOutlier: boolean; // Outlier detection flag
-  converged: boolean; // Convergence status
-  sampleIndex: number; // Current sample count
-  driftDetected: boolean; // Drift detection flag
+  effectiveLearningRate: number; // Current LR after schedule
+  isOutlier: boolean; // Any outlier detected?
+  converged: boolean; // Gradient < threshold?
+  sampleIndex: number; // Total samples processed
+  driftDetected: boolean; // ADWIN detected drift?
 }
 ```
 
 **Example:**
 
 ```typescript
-// Single sample training
-const result = model.fitOnline({
-  xCoordinates: [[1.0, 2.0, 3.0, 4.0, 5.0]],
-  yCoordinates: [[10.0, 12.0]],
-});
+const model = new ConvolutionalRegression();
 
-// Batch training
-const batchResult = model.fitOnline({
-  xCoordinates: [
-    [1.0, 2.0, 3.0, 4.0, 5.0],
-    [2.0, 3.0, 4.0, 5.0, 6.0],
-    [3.0, 4.0, 5.0, 6.0, 7.0],
-  ],
-  yCoordinates: [
-    [10.0, 12.0],
-    [12.0, 14.0],
-    [14.0, 16.0],
-  ],
+// Single batch training
+const result = model.fitOnline({
+  xCoordinates: [[1, 2, 3], [4, 5, 6]],
+  yCoordinates: [[10], [20]],
 });
 
 console.log(`Loss: ${result.loss}`);
-console.log(`Gradient Norm: ${result.gradientNorm}`);
-console.log(`Learning Rate: ${result.effectiveLearningRate}`);
+console.log(`Converged: ${result.converged}`);
+
+// Streaming training
+for await (const batch of dataStream) {
+  const result = model.fitOnline(batch);
+
+  if (result.driftDetected) {
+    console.log("⚠️ Concept drift detected!");
+  }
+
+  if (result.converged) {
+    console.log("✅ Model has converged");
+    break;
+  }
+}
 ```
 
 ---
 
-#### 🔮 `predict(futureSteps)`
+### `predict(futureSteps)`
 
-Generates predictions for future steps using autoregressive prediction.
+Generate predictions with uncertainty estimates.
+
+**Signature:**
 
 ```typescript
 predict(futureSteps: number): PredictionResult
 ```
 
-**Parameters:**
-
-| Name          | Type     | Description                       |
-| ------------- | -------- | --------------------------------- |
-| `futureSteps` | `number` | Number of future steps to predict |
-
-**Returns:** `PredictionResult`
+**Returns: `PredictionResult`**
 
 ```typescript
 interface PredictionResult {
   predictions: SinglePrediction[]; // Array of predictions
-  accuracy: number; // Model accuracy: 1/(1 + L̄)
-  sampleCount: number; // Training sample count
-  isModelReady: boolean; // Model readiness flag
+  accuracy: number; // Model accuracy metric
+  sampleCount: number; // Training samples seen
+  isModelReady: boolean; // Enough training data?
 }
 
 interface SinglePrediction {
-  predicted: number[]; // Predicted values
+  predicted: number[]; // Point predictions
   lowerBound: number[]; // 95% CI lower bound
   upperBound: number[]; // 95% CI upper bound
-  standardError: number[]; // Standard error per dimension
+  standardError: number[]; // Standard error per output
 }
 ```
 
 **Example:**
 
 ```typescript
-const predictions = model.predict(5);
+const result = model.predict(5);
 
-if (predictions.isModelReady) {
-  predictions.predictions.forEach((pred, step) => {
-    console.log(`\n📅 Step ${step + 1}:`);
-    console.log(`   Predicted: [${pred.predicted.join(", ")}]`);
-    console.log(`   Lower 95%: [${pred.lowerBound.join(", ")}]`);
-    console.log(`   Upper 95%: [${pred.upperBound.join(", ")}]`);
-    console.log(`   Std Error: [${pred.standardError.join(", ")}]`);
-  });
+if (!result.isModelReady) {
+  console.log("⚠️ Model needs more training data");
+}
 
-  console.log(
-    `\n📊 Model Accuracy: ${(predictions.accuracy * 100).toFixed(2)}%`,
-  );
+console.log(`📊 Model Accuracy: ${(result.accuracy * 100).toFixed(2)}%`);
+
+for (let i = 0; i < result.predictions.length; i++) {
+  const pred = result.predictions[i];
+  console.log(`Step ${i + 1}:`);
+  console.log(`  Predicted: ${pred.predicted}`);
+  console.log(`  95% CI: [${pred.lowerBound}, ${pred.upperBound}]`);
+  console.log(`  Std Error: ${pred.standardError}`);
 }
 ```
 
 ---
 
-#### 📊 `getModelSummary()`
+### `getModelSummary()`
 
-Returns comprehensive model information.
+Get comprehensive model information.
 
-```typescript
-getModelSummary(): ModelSummary
-```
-
-**Returns:** `ModelSummary`
+**Returns: `ModelSummary`**
 
 ```typescript
 interface ModelSummary {
-  isInitialized: boolean; // Initialization status
-  inputDimension: number; // Input feature count
-  outputDimension: number; // Output feature count
-  hiddenLayers: number; // Number of conv layers
-  convolutionsPerLayer: number; // Filters per layer
+  isInitialized: boolean; // Has model been trained?
+  inputDimension: number; // Number of input features
+  outputDimension: number; // Number of outputs
+  hiddenLayers: number; // Conv layer count
+  convolutionsPerLayer: number; // Channels per layer
   kernelSize: number; // Convolution kernel size
-  totalParameters: number; // Total trainable params
-  sampleCount: number; // Processed samples
+  totalParameters: number; // Trainable parameter count
+  sampleCount: number; // Training samples seen
   accuracy: number; // Current accuracy
-  converged: boolean; // Convergence status
+  converged: boolean; // Has converged?
   effectiveLearningRate: number; // Current learning rate
-  driftCount: number; // Detected drift events
+  driftCount: number; // Number of drifts detected
 }
 ```
 
@@ -421,920 +930,516 @@ interface ModelSummary {
 const summary = model.getModelSummary();
 
 console.log(`
-╔════════════════════════════════════════╗
-║           MODEL SUMMARY                ║
-╠════════════════════════════════════════╣
-║ Status:      ${summary.isInitialized ? "✅ Initialized" : "❌ Not Ready"}
-║ Architecture: ${summary.inputDimension} → [Conv×${summary.hiddenLayers}] → ${summary.outputDimension}
-║ Parameters:  ${summary.totalParameters.toLocaleString()}
-║ Samples:     ${summary.sampleCount.toLocaleString()}
-║ Accuracy:    ${(summary.accuracy * 100).toFixed(2)}%
-║ Converged:   ${summary.converged ? "✅ Yes" : "⏳ No"}
-║ Drift Events: ${summary.driftCount}
-╚════════════════════════════════════════╝
+╔══════════════════════════════════════════╗
+║           MODEL SUMMARY                  ║
+╠══════════════════════════════════════════╣
+║ Architecture                             ║
+║   Input Dimension:    ${
+  summary.inputDimension.toString().padStart(6)
+}         ║
+║   Output Dimension:   ${
+  summary.outputDimension.toString().padStart(6)
+}         ║
+║   Hidden Layers:      ${summary.hiddenLayers.toString().padStart(6)}         ║
+║   Convolutions/Layer: ${
+  summary.convolutionsPerLayer.toString().padStart(6)
+}         ║
+║   Kernel Size:        ${summary.kernelSize.toString().padStart(6)}         ║
+║   Total Parameters:   ${
+  summary.totalParameters.toString().padStart(6)
+}         ║
+╠══════════════════════════════════════════╣
+║ Training Status                          ║
+║   Samples Processed:  ${summary.sampleCount.toString().padStart(6)}         ║
+║   Accuracy:           ${
+  (summary.accuracy * 100).toFixed(2).padStart(5)
+}%        ║
+║   Converged:          ${summary.converged.toString().padStart(6)}         ║
+║   Drift Events:       ${summary.driftCount.toString().padStart(6)}         ║
+║   Current LR:         ${
+  summary.effectiveLearningRate.toExponential(2).padStart(10)
+}   ║
+╚══════════════════════════════════════════╝
 `);
 ```
 
 ---
 
-#### 🔧 `getWeights()`
+### `getWeights()`
 
-Retrieves model weights and optimizer states.
+Retrieve all model weights and optimizer state.
 
-```typescript
-getWeights(): WeightInfo
-```
-
-**Returns:** `WeightInfo`
+**Returns: `WeightInfo`**
 
 ```typescript
 interface WeightInfo {
-  kernels: number[][][]; // Conv kernel weights
-  biases: number[][]; // Bias terms
+  kernels: number[][][]; // Layer kernels
+  biases: number[][][]; // Layer biases
   firstMoment: number[][][]; // Adam m values
   secondMoment: number[][][]; // Adam v values
-  updateCount: number; // Total updates
+  updateCount: number; // Number of Adam updates
 }
 ```
 
 ---
 
-#### 📈 `getNormalizationStats()`
+### `getNormalizationStats()`
 
-Gets running normalization statistics.
+Get input/output normalization statistics.
 
-```typescript
-getNormalizationStats(): NormalizationStats
-```
-
-**Returns:** `NormalizationStats`
+**Returns: `NormalizationStats`**
 
 ```typescript
 interface NormalizationStats {
-  inputMean: number[]; // Running input mean
-  inputStd: number[]; // Running input std
-  outputMean: number[]; // Running output mean
-  outputStd: number[]; // Running output std
-  count: number; // Sample count
+  inputMean: number[]; // Mean of input features
+  inputStd: number[]; // Std of input features
+  outputMean: number[]; // Mean of outputs
+  outputStd: number[]; // Std of outputs
+  count: number; // Number of samples
 }
 ```
 
 ---
 
-#### 🔄 `reset()`
+### `save()` & `load()`
 
-Resets model to initial state.
-
-```typescript
-reset(): void
-```
+Serialize and restore complete model state.
 
 **Example:**
+
+```typescript
+// Save model
+const savedState = model.save();
+localStorage.setItem("myModel", savedState);
+
+// Later: restore model
+const newModel = new ConvolutionalRegression();
+const savedState = localStorage.getItem("myModel");
+if (savedState) {
+  newModel.load(savedState);
+  console.log("✅ Model restored successfully");
+}
+```
+
+---
+
+### `reset()`
+
+Clear all model state and return to uninitialized.
 
 ```typescript
 model.reset();
-console.log("Model reset to initial state");
+// Model is now fresh, ready for new training
 ```
 
 ---
 
-#### 💾 `save()`
+## 🎯 Optimization Guide
 
-Serializes model state to JSON string.
+### Scenario-Based Configuration
 
-```typescript
-save(): string
-```
-
-**Example:**
+#### 📈 Time Series Forecasting
 
 ```typescript
-// Save to localStorage
-const modelState = model.save();
-localStorage.setItem("my-model", modelState);
-
-// Save to file (Node.js)
-import { writeFileSync } from "fs";
-writeFileSync("model.json", model.save());
-```
-
----
-
-#### 📂 `load(jsonString)`
-
-Loads model state from JSON string.
-
-```typescript
-load(jsonString: string): void
-```
-
-**Example:**
-
-```typescript
-// Load from localStorage
-const savedState = localStorage.getItem("my-model");
-if (savedState) {
-  model.load(savedState);
-  console.log("Model loaded successfully!");
-}
-
-// Load from file (Node.js)
-import { readFileSync } from "fs";
-model.load(readFileSync("model.json", "utf-8"));
-```
-
----
-
-## ⚙️ Parameter Optimization Guide
-
-### 🎯 Quick Selection Guide
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    PARAMETER SELECTION DECISION TREE                        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│                         What's your priority?                               │
-│                              │                                              │
-│              ┌───────────────┼───────────────┐                              │
-│              ▼               ▼               ▼                              │
-│         ⚡ Speed        🎯 Accuracy      💾 Memory                          │
-│              │               │               │                              │
-│              ▼               ▼               ▼                              │
-│     hiddenLayers: 1    hiddenLayers: 3+   hiddenLayers: 1-2                │
-│     filters: 16        filters: 64-128    filters: 16-32                   │
-│     kernelSize: 3      kernelSize: 5-7    kernelSize: 3                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 📊 Parameter Deep Dive
-
-#### 1️⃣ Hidden Layers (`hiddenLayers`)
-
-Controls network depth and feature hierarchy.
-
-```
-DEPTH VS COMPLEXITY
-
-Shallow (1-2 layers)          Deep (3-5 layers)           Very Deep (6-10 layers)
-━━━━━━━━━━━━━━━━━━━          ━━━━━━━━━━━━━━━━━━          ━━━━━━━━━━━━━━━━━━━━━━
-✅ Fast training              ✅ Complex patterns          ⚠️ Risk of overfitting
-✅ Less overfitting           ✅ Better abstraction        ⚠️ Slow convergence
-✅ Good for simple data       ⚠️ More data needed          ⚠️ Requires more data
-❌ Limited expressivity       ❌ Slower training           ✅ Maximum expressivity
-```
-
-| Use Case            | Recommended | Example                               |
-| ------------------- | ----------- | ------------------------------------- |
-| Simple regression   | `1-2`       | Linear trends, simple patterns        |
-| Standard timeseries | `2-3`       | Stock prices, weather data            |
-| Complex patterns    | `3-5`       | Multi-seasonal data, complex dynamics |
-| High-dimensional    | `4-6`       | Image-like sequential data            |
-
-**Example Configuration:**
-
-```typescript
-// Simple linear trends
-const simpleModel = new ConvolutionalRegression({
-  hiddenLayers: 1,
-  convolutionsPerLayer: 16,
-});
-
-// Complex seasonal patterns
-const complexModel = new ConvolutionalRegression({
-  hiddenLayers: 4,
-  convolutionsPerLayer: 64,
-});
-```
-
----
-
-#### 2️⃣ Convolutions Per Layer (`convolutionsPerLayer`)
-
-Controls the number of learned features at each layer.
-
-```
-FILTER COUNT IMPACT
-
-      Low (8-16)              Medium (32-64)            High (128-256)
-    ┌──────────┐            ┌──────────────┐          ┌──────────────┐
-    │ ░░░░░░░░ │            │ ▓▓▓▓▓▓▓▓▓▓▓▓ │          │ ████████████ │
-    │ ░░░░░░░░ │            │ ▓▓▓▓▓▓▓▓▓▓▓▓ │          │ ████████████ │
-    └──────────┘            └──────────────┘          └──────────────┘
-    ~100-1K params          ~10K-50K params          ~100K-500K params
-    
-    ✅ Fast inference        ✅ Balanced                ✅ High capacity
-    ❌ Limited features      ✅ Good generalization     ❌ Memory intensive
-```
-
-**Scaling Formula:**
-
-```
-Parameters ≈ Σ(filters[l] × filters[l-1] × kernel_size) + dense_layer
-```
-
-| Data Complexity | Recommended Filters | Total Params (approx) |
-| --------------- | ------------------- | --------------------- |
-| Low             | `8-16`              | ~500 - 2K             |
-| Medium          | `32-64`             | ~10K - 50K            |
-| High            | `64-128`            | ~50K - 200K           |
-| Very High       | `128-256`           | ~200K - 1M            |
-
-**Example:**
-
-```typescript
-// Resource-constrained environment
-const lightModel = new ConvolutionalRegression({
-  hiddenLayers: 2,
-  convolutionsPerLayer: 16, // ~2K parameters
-});
-
-// High-accuracy requirement
-const heavyModel = new ConvolutionalRegression({
+const timeSeriesModel = new ConvolutionalRegression({
   hiddenLayers: 3,
-  convolutionsPerLayer: 128, // ~150K parameters
-});
-```
-
----
-
-#### 3️⃣ Kernel Size (`kernelSize`)
-
-Controls the receptive field of each convolution.
-
-```
-RECEPTIVE FIELD VISUALIZATION
-
-kernelSize = 3                kernelSize = 5                kernelSize = 7
-───●───                       ─────●─────                   ───────●───────
-   ↓                              ↓                              ↓
-[x][x][x]                  [x][x][x][x][x]            [x][x][x][x][x][x][x]
-   │                              │                              │
-Local patterns            Medium-range patterns       Long-range patterns
-```
-
-| Pattern Type      | Kernel Size           | Use Case                           |
-| ----------------- | --------------------- | ---------------------------------- |
-| Sharp changes     | `3`                   | Point anomalies, quick transitions |
-| Smooth trends     | `5-7`                 | Gradual changes, moving averages   |
-| Long dependencies | `7-11`                | Seasonal patterns, slow dynamics   |
-| Mixed             | `3` + multiple layers | Hierarchical feature extraction    |
-
-**Example:**
-
-```typescript
-// Quick-changing signals (e.g., high-frequency trading)
-const quickModel = new ConvolutionalRegression({
-  kernelSize: 3,
-  hiddenLayers: 3, // Stack to increase receptive field
-});
-
-// Slow-changing signals (e.g., climate data)
-const slowModel = new ConvolutionalRegression({
-  kernelSize: 7,
-  hiddenLayers: 2,
-});
-```
-
----
-
-#### 4️⃣ Learning Rate (`learningRate`)
-
-Controls the step size during optimization.
-
-```
-LEARNING RATE EFFECTS
-
-Too High (>0.01)          Optimal (~0.001)           Too Low (<0.0001)
-        ╱╲                       ╱╲                        
-       ╱  ╲                     ╱  ╲                      ___
-      ╱    ╲                   ╱    ╲___                 ╱
-     ╱      ╲                 ╱         ───             ╱
-    ╱        ╲               ╱                         ╱
-───╱──────────╲───       ───╱──────────────────    ───╱────────────────
-   Divergence!            Smooth convergence        Very slow progress
-```
-
-**Recommended Values:**
-
-| Scenario      | Learning Rate | Notes               |
-| ------------- | ------------- | ------------------- |
-| Default       | `0.001`       | Good starting point |
-| Fine-tuning   | `0.0001`      | Small adjustments   |
-| Noisy data    | `0.0005`      | More stable         |
-| Large batches | `0.003`       | Can scale up        |
-| Small batches | `0.0005`      | Reduce variance     |
-
----
-
-#### 5️⃣ Learning Rate Schedule (`warmupSteps`, `totalSteps`)
-
-```
-LEARNING RATE SCHEDULE
-
-     LR
-      │
-  max │     ╱╲
-      │    ╱  ╲
-      │   ╱    ╲____
-      │  ╱          ╲____
-      │ ╱                ╲____
-  min │╱                      ╲___
-      └────────────────────────────► Steps
-        ↑           ↑
-      Warmup    Cosine Decay
-      Phase       Phase
-
-Formula:
-  Warmup:  lr = base_lr × (step / warmup_steps)
-  Decay:   lr = base_lr × 0.5 × (1 + cos(π × progress))
-```
-
-| Dataset Size       | Warmup Steps | Total Steps |
-| ------------------ | ------------ | ----------- |
-| Small (<1K)        | `50`         | `2000`      |
-| Medium (1K-10K)    | `100`        | `10000`     |
-| Large (10K-100K)   | `500`        | `50000`     |
-| Very Large (>100K) | `1000`       | `100000`    |
-
-**Example:**
-
-```typescript
-// Small dataset with quick training
-const smallDataModel = new ConvolutionalRegression({
-  warmupSteps: 50,
-  totalSteps: 2000,
-  learningRate: 0.001,
-});
-
-// Large dataset with extended training
-const largeDataModel = new ConvolutionalRegression({
-  warmupSteps: 1000,
-  totalSteps: 100000,
-  learningRate: 0.001,
-});
-```
-
----
-
-#### 6️⃣ Adam Optimizer (`beta1`, `beta2`, `epsilon`)
-
-```
-ADAM MOMENTUM VISUALIZATION
-
-                    Gradient with noise
-                    ↓  ↓  ↓  ↓  ↓  ↓
-                    ●──●──●──●──●──●   Raw gradients (noisy)
-                   
-                         β₁ = 0.9
-                    ↓    (momentum)    ↓
-                    ●═══════════════●   First moment (smoothed direction)
-                    
-                         β₂ = 0.999
-                    ↓   (RMSprop)     ↓
-                    ●═══════════════●   Second moment (adaptive LR)
-```
-
-| Parameter | Default | Effect              | Tuning                          |
-| --------- | ------- | ------------------- | ------------------------------- |
-| `beta1`   | `0.9`   | Momentum decay      | Lower (0.8) for noisy gradients |
-| `beta2`   | `0.999` | Adaptive LR decay   | Lower (0.99) for non-stationary |
-| `epsilon` | `1e-8`  | Numerical stability | Increase for sparse gradients   |
-
----
-
-#### 7️⃣ Regularization (`regularizationStrength`)
-
-```
-L2 REGULARIZATION EFFECT
-
-     Loss
-      │
-      │  ●────────●  No regularization (overfitting)
-      │   ╲
-      │    ●──────●  Moderate λ (good fit)
-      │     ╲
-      │      ●────●  High λ (underfitting)
-      │
-      └────────────────► Model Complexity
-
-Loss = MSE + (λ/2) × Σ‖W‖²
-```
-
-| Scenario                    | λ Value | Effect                |
-| --------------------------- | ------- | --------------------- |
-| Complex model, limited data | `1e-3`  | Strong regularization |
-| Balanced                    | `1e-4`  | Default, moderate     |
-| Simple model, lots of data  | `1e-5`  | Light regularization  |
-| No regularization           | `0`     | Pure MSE loss         |
-
----
-
-#### 8️⃣ Outlier Detection (`outlierThreshold`)
-
-```
-OUTLIER DETECTION
-
-     │  Normal Distribution
-     │        ╱╲
-     │       ╱  ╲
-     │      ╱    ╲
-     │     ╱      ╲
-     │────╱────────╲────
-         │←──3σ──→│
-         
-    Points outside 3σ are flagged as outliers
-    and given reduced weight (0.1× instead of 1×)
-```
-
-| Threshold | Outlier % (Normal) | Use Case                |
-| --------- | ------------------ | ----------------------- |
-| `2.0`     | ~4.6%              | Aggressive filtering    |
-| `2.5`     | ~1.2%              | Moderate filtering      |
-| `3.0`     | ~0.3%              | Conservative (default)  |
-| `4.0`     | ~0.006%            | Very rare outliers only |
-
----
-
-#### 9️⃣ Drift Detection (`adwinDelta`)
-
-```
-ADWIN DRIFT DETECTION
-
-     Loss
-      │    Concept Drift!
-      │         ↓
-      │  ●●●●●●●╱●●●●●●●
-      │        ╱
-      │  ●●●●●╱
-      │      │
-      └──────┴────────────► Time
-            Window shrinks when
-            drift is detected
-```
-
-| Delta    | Sensitivity      | Use Case                |
-| -------- | ---------------- | ----------------------- |
-| `0.0002` | Very High        | Rapid adaptation needed |
-| `0.002`  | Medium (default) | Balanced detection      |
-| `0.02`   | Low              | Only major shifts       |
-| `0.2`    | Very Low         | Ignore most changes     |
-
----
-
-### 🎛️ Preset Configurations
-
-```typescript
-// 🚀 FAST: Minimal computation, quick results
-const FAST_PRESET = {
-  hiddenLayers: 1,
-  convolutionsPerLayer: 16,
-  kernelSize: 3,
-  learningRate: 0.003,
-  warmupSteps: 50,
-  totalSteps: 2000,
-};
-
-// ⚖️ BALANCED: Good accuracy with reasonable speed
-const BALANCED_PRESET = {
-  hiddenLayers: 2,
-  convolutionsPerLayer: 32,
-  kernelSize: 3,
-  learningRate: 0.001,
-  warmupSteps: 100,
-  totalSteps: 10000,
-};
-
-// 🎯 ACCURATE: Maximum accuracy, slower training
-const ACCURATE_PRESET = {
-  hiddenLayers: 4,
   convolutionsPerLayer: 64,
-  kernelSize: 5,
+  kernelSize: 5, // Capture temporal patterns
   learningRate: 0.0005,
-  warmupSteps: 500,
+  warmupSteps: 200,
   totalSteps: 50000,
-  regularizationStrength: 1e-5,
-};
+  regularizationStrength: 1e-4,
+  adwinDelta: 0.001, // Sensitive to distribution shifts
+});
+```
 
-// 🌊 STREAMING: Optimized for online learning
-const STREAMING_PRESET = {
+#### 🏭 Industrial Sensor Data (Noisy)
+
+```typescript
+const industrialModel = new ConvolutionalRegression({
   hiddenLayers: 2,
   convolutionsPerLayer: 32,
   kernelSize: 3,
   learningRate: 0.001,
-  adwinDelta: 0.001, // More sensitive drift detection
-  outlierThreshold: 2.5, // More aggressive outlier filtering
-};
+  outlierThreshold: 2.5, // More robust to outliers
+  regularizationStrength: 1e-3, // Stronger regularization
+  adwinDelta: 0.002,
+});
+```
+
+#### 🚀 Real-time Streaming Data
+
+```typescript
+const streamingModel = new ConvolutionalRegression({
+  hiddenLayers: 1, // Lightweight
+  convolutionsPerLayer: 16, // Fast inference
+  kernelSize: 3,
+  learningRate: 0.002, // Faster adaptation
+  warmupSteps: 50, // Quick warmup
+  totalSteps: 100000, // Long-running
+  adwinDelta: 0.001, // Quick drift detection
+});
+```
+
+#### 🔬 High-Precision Scientific Data
+
+```typescript
+const scientificModel = new ConvolutionalRegression({
+  hiddenLayers: 4,
+  convolutionsPerLayer: 128,
+  kernelSize: 5,
+  learningRate: 0.0001, // Careful learning
+  warmupSteps: 500,
+  totalSteps: 100000,
+  convergenceThreshold: 1e-8, // Strict convergence
+  regularizationStrength: 1e-5,
+  outlierThreshold: 4.0, // Very clean data expected
+});
+```
+
+#### 📱 Edge Device (Resource Constrained)
+
+```typescript
+const edgeModel = new ConvolutionalRegression({
+  hiddenLayers: 1,
+  convolutionsPerLayer: 8, // Minimal footprint
+  kernelSize: 3,
+  learningRate: 0.001,
+  warmupSteps: 20,
+  totalSteps: 5000,
+});
 ```
 
 ---
 
-## 📊 Examples
+### Parameter Tuning Flowchart
 
-### Example 1: Time Series Forecasting
+```
+                START
+                  │
+                  ▼
+      ┌───────────────────────┐
+      │  Use default config   │
+      │  & observe loss curve │
+      └───────────────────────┘
+                  │
+                  ▼
+      ┌───────────────────────┐
+      │   Loss decreasing?    │
+      └───────────────────────┘
+            │           │
+           YES          NO
+            │           │
+            ▼           ▼
+┌─────────────┐  ┌────────────────┐
+│  Continue   │  │ Learning rate  │
+│  training   │  │  too high?     │
+└─────────────┘  └────────────────┘
+                      │      │
+                     YES     NO
+                      │      │
+                      ▼      ▼
+           ┌──────────┐  ┌──────────────┐
+           │ Decrease │  │ Increase     │
+           │ LR by 2x │  │ model size   │
+           └──────────┘  └──────────────┘
+                      │
+                      ▼
+      ┌───────────────────────┐
+      │   Overfitting?        │
+      │ (train↓ but val↑)     │
+      └───────────────────────┘
+            │           │
+           YES          NO
+            │           │
+            ▼           ▼
+┌─────────────┐  ┌────────────────┐
+│ ↑ L2 reg    │  │   Check for    │
+│ ↓ model     │  │   convergence  │
+│   capacity  │  │                │
+└─────────────┘  └────────────────┘
+```
+
+---
+
+## 💡 Use Case Examples
+
+### Example 1: Multi-Output Regression
 
 ```typescript
 import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
 
-// Create model for stock price prediction
-const stockModel = new ConvolutionalRegression({
-  hiddenLayers: 3,
-  convolutionsPerLayer: 64,
-  kernelSize: 5,
-  learningRate: 0.001,
-  outlierThreshold: 2.5, // Financial data often has outliers
+// Predict multiple outputs from multiple inputs
+const model = new ConvolutionalRegression({
+  hiddenLayers: 2,
+  convolutionsPerLayer: 32,
 });
 
-// Training data: sliding window of 10 days → predict next 2 days
+// Training data: 3 inputs → 2 outputs
 const trainingData = {
   xCoordinates: [
-    [100, 102, 101, 103, 105, 104, 106, 108, 107, 109],
-    [102, 101, 103, 105, 104, 106, 108, 107, 109, 111],
-    [101, 103, 105, 104, 106, 108, 107, 109, 111, 110],
+    [1.0, 2.0, 3.0],
+    [2.0, 3.0, 4.0],
+    [3.0, 4.0, 5.0],
+    [4.0, 5.0, 6.0],
   ],
   yCoordinates: [
-    [111, 110],
-    [110, 112],
-    [112, 114],
+    [6.0, 2.0], // sum, variance proxy
+    [9.0, 2.0],
+    [12.0, 2.0],
+    [15.0, 2.0],
   ],
 };
 
-// Train for multiple epochs
+// Train
 for (let epoch = 0; epoch < 100; epoch++) {
-  const result = stockModel.fitOnline(trainingData);
+  const result = model.fitOnline(trainingData);
 
   if (epoch % 20 === 0) {
     console.log(`Epoch ${epoch}: Loss = ${result.loss.toFixed(6)}`);
   }
-
-  if (result.converged) {
-    console.log(`✅ Converged at epoch ${epoch}`);
-    break;
-  }
 }
 
-// Predict next 5 days
-const forecast = stockModel.predict(5);
-console.log("\n📈 Stock Price Forecast:");
-forecast.predictions.forEach((pred, day) => {
+// Predict
+const predictions = model.predict(3);
+console.log("\n📊 Predictions:");
+predictions.predictions.forEach((p, i) => {
   console.log(
-    `  Day ${day + 1}: $${pred.predicted[0].toFixed(2)} (±${
-      (pred.upperBound[0] - pred.predicted[0]).toFixed(2)
-    })`,
+    `  Step ${i + 1}: [${p.predicted.map((v) => v.toFixed(2)).join(", ")}]`,
   );
 });
 ```
 
----
-
-### Example 2: Multi-Sensor Prediction
+### Example 2: Continuous Learning with Drift Detection
 
 ```typescript
-// IoT sensor data: temperature, humidity, pressure → predict future values
-const sensorModel = new ConvolutionalRegression({
-  hiddenLayers: 2,
-  convolutionsPerLayer: 48,
+import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
+
+const model = new ConvolutionalRegression({
+  adwinDelta: 0.001, // Sensitive drift detection
   learningRate: 0.001,
 });
 
-// Simulate streaming sensor data
-function processSensorReading(
-  temp: number,
-  humidity: number,
-  pressure: number,
-) {
-  // Historical window (last 6 readings)
-  const inputWindow = [
-    prevReadings.slice(-6).map((r) => r.temp),
-    prevReadings.slice(-6).map((r) => r.humidity),
-    prevReadings.slice(-6).map((r) => r.pressure),
-  ].flat();
+// Simulate streaming data with concept drift
+async function processDataStream() {
+  let phase = 1;
 
-  const result = sensorModel.fitOnline({
-    xCoordinates: [inputWindow],
-    yCoordinates: [[temp, humidity, pressure]],
-  });
+  for (let t = 0; t < 1000; t++) {
+    // Generate data with drift at t=500
+    const x = [Math.sin(t * 0.1), Math.cos(t * 0.1), t * 0.01];
+    const y = phase === 1
+      ? [x[0] + x[1]] // Phase 1: simple sum
+      : [x[0] * x[1] + x[2]]; // Phase 2: different relationship
 
-  if (result.driftDetected) {
-    console.log("⚠️ Environmental change detected!");
-  }
+    if (t === 500) phase = 2; // Introduce drift
 
-  return result;
-}
-
-// Get predictions with confidence intervals
-const predictions = sensorModel.predict(3);
-predictions.predictions.forEach((pred, hour) => {
-  console.log(`\nHour +${hour + 1}:`);
-  console.log(
-    `  🌡️  Temp: ${pred.predicted[0].toFixed(1)}°C [${
-      pred.lowerBound[0].toFixed(1)
-    } - ${pred.upperBound[0].toFixed(1)}]`,
-  );
-  console.log(
-    `  💧 Humidity: ${pred.predicted[1].toFixed(1)}% [${
-      pred.lowerBound[1].toFixed(1)
-    } - ${pred.upperBound[1].toFixed(1)}]`,
-  );
-  console.log(
-    `  📊 Pressure: ${pred.predicted[2].toFixed(1)}hPa [${
-      pred.lowerBound[2].toFixed(1)
-    } - ${pred.upperBound[2].toFixed(1)}]`,
-  );
-});
-```
-
----
-
-### Example 3: Model Persistence
-
-```typescript
-// Save trained model
-const model = new ConvolutionalRegression({ hiddenLayers: 3 });
-
-// ... training ...
-
-// Save to JSON
-const savedState = model.save();
-console.log(`Model size: ${(savedState.length / 1024).toFixed(2)} KB`);
-
-// Store in localStorage
-localStorage.setItem("myModel", savedState);
-
-// Later: Load model
-const loadedModel = new ConvolutionalRegression();
-loadedModel.load(localStorage.getItem("myModel")!);
-
-// Continue training or make predictions
-const summary = loadedModel.getModelSummary();
-console.log(`Loaded model with ${summary.sampleCount} training samples`);
-```
-
----
-
-### Example 4: Real-time Dashboard Integration
-
-```typescript
-class PredictionDashboard {
-  private model: ConvolutionalRegression;
-  private dataBuffer: number[][] = [];
-
-  constructor() {
-    this.model = new ConvolutionalRegression({
-      hiddenLayers: 2,
-      convolutionsPerLayer: 32,
-      adwinDelta: 0.001, // Quick drift detection
-    });
-  }
-
-  addDataPoint(values: number[]): {
-    prediction: number[] | null;
-    metrics: any;
-  } {
-    this.dataBuffer.push(values);
-
-    if (this.dataBuffer.length < 10) {
-      return { prediction: null, metrics: null };
-    }
-
-    // Keep sliding window of 10
-    if (this.dataBuffer.length > 10) {
-      this.dataBuffer.shift();
-    }
-
-    // Train on current window
-    const x = this.dataBuffer.slice(0, 9).flat();
-    const y = this.dataBuffer[9];
-
-    const fitResult = this.model.fitOnline({
+    const result = model.fitOnline({
       xCoordinates: [x],
       yCoordinates: [y],
     });
 
-    // Get next prediction
-    const predictions = this.model.predict(1);
+    if (result.driftDetected) {
+      console.log(`🔄 Drift detected at t=${t}!`);
+      console.log(`   Loss: ${result.loss.toFixed(4)}`);
+    }
 
-    return {
-      prediction: predictions.isModelReady
-        ? predictions.predictions[0].predicted
-        : null,
-      metrics: {
-        loss: fitResult.loss,
-        accuracy: predictions.accuracy,
-        driftDetected: fitResult.driftDetected,
-        learningRate: fitResult.effectiveLearningRate,
-      },
-    };
+    // Periodic status
+    if (t % 100 === 0) {
+      const summary = model.getModelSummary();
+      console.log(
+        `t=${t}: Accuracy=${
+          (summary.accuracy * 100).toFixed(1)
+        }%, Drifts=${summary.driftCount}`,
+      );
+    }
+  }
+}
+
+processDataStream();
+```
+
+### Example 3: Model Persistence
+
+```typescript
+import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
+
+// Training phase
+async function train() {
+  const model = new ConvolutionalRegression({
+    hiddenLayers: 2,
+    convolutionsPerLayer: 32,
+  });
+
+  // Train on data...
+  for (let i = 0; i < 1000; i++) {
+    model.fitOnline({
+      xCoordinates: [[Math.random(), Math.random()]],
+      yCoordinates: [[Math.random()]],
+    });
   }
 
-  getStats() {
-    return this.model.getModelSummary();
-  }
+  // Save model
+  const serialized = model.save();
+  await Deno.writeTextFile("model.json", serialized);
+  console.log("✅ Model saved!");
+
+  return model.getModelSummary();
+}
+
+// Inference phase
+async function inference() {
+  const model = new ConvolutionalRegression();
+
+  // Load model
+  const serialized = await Deno.readTextFile("model.json");
+  model.load(serialized);
+  console.log("✅ Model loaded!");
+
+  // Make predictions
+  const result = model.predict(5);
+  return result.predictions;
+}
+
+// Usage
+const trainingSummary = await train();
+console.log("Training completed:", trainingSummary);
+
+const predictions = await inference();
+console.log("Predictions:", predictions);
+```
+
+### Example 4: Uncertainty-Aware Predictions
+
+```typescript
+import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
+
+const model = new ConvolutionalRegression();
+
+// Train model
+// ... (training code)
+
+// Get predictions with uncertainty
+const result = model.predict(10);
+
+console.log("\n📊 Predictions with Confidence Intervals:\n");
+console.log("┌──────┬────────────┬─────────────────────┬────────────┐");
+console.log("│ Step │ Prediction │      95% CI         │ Std Error  │");
+console.log("├──────┼────────────┼─────────────────────┼────────────┤");
+
+result.predictions.forEach((pred, i) => {
+  const prediction = pred.predicted[0].toFixed(3);
+  const lower = pred.lowerBound[0].toFixed(3);
+  const upper = pred.upperBound[0].toFixed(3);
+  const stdErr = pred.standardError[0].toFixed(4);
+
+  console.log(
+    `│ ${(i + 1).toString().padStart(4)} │ ${
+      prediction.padStart(10)
+    } │ [${lower}, ${upper}] │ ${stdErr.padStart(10)} │`,
+  );
+});
+
+console.log("└──────┴────────────┴─────────────────────┴────────────┘");
+
+// Use uncertainty for decision making
+const criticalPredictions = result.predictions.filter(
+  (p) => p.standardError[0] > 0.5,
+);
+
+if (criticalPredictions.length > 0) {
+  console.log("\n⚠️ Warning: Some predictions have high uncertainty!");
 }
 ```
 
 ---
 
-## 🔬 Mathematical Background
+## 🔧 Advanced Topics
 
-### Loss Function
+### Internal Algorithms
 
-The model minimizes the regularized mean squared error:
-
-$$L = \frac{1}{2n}\sum_{i=1}^{n}\|y_i - \hat{y}_i\|^2 + \frac{\lambda}{2}\sum_l\|W_l\|^2$$
-
-Where:
-
-- $n$ = batch size
-- $y_i$ = target values
-- $\hat{y}_i$ = predicted values
-- $\lambda$ = regularization strength
-- $W_l$ = weights at layer $l$
-
----
-
-### Adam Optimizer
-
-The Adam optimizer maintains running estimates of first and second moments:
-
-$$m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t$$
-
-$$v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2$$
-
-Bias-corrected estimates:
-
-$$\hat{m}_t = \frac{m_t}{1 - \beta_1^t}$$
-
-$$\hat{v}_t = \frac{v_t}{1 - \beta_2^t}$$
-
-Parameter update:
-
-$$\theta_{t+1} = \theta_t - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}$$
-
----
-
-### Welford's Algorithm
-
-For numerically stable online computation of mean and variance:
-
-$$\delta = x - \mu_{n-1}$$
-
-$$\mu_n = \mu_{n-1} + \frac{\delta}{n}$$
-
-$$M_{2,n} = M_{2,n-1} + \delta(x - \mu_n)$$
-
-$$\sigma^2 = \frac{M_2}{n-1}$$
-
----
-
-### ADWIN Drift Detection
-
-Detects distribution change when:
-
-$$|\mu_0 - \mu_1| \geq \epsilon_{cut}$$
-
-Where:
-
-$$\epsilon_{cut} = \sqrt{\frac{2}{m} \ln\frac{2}{\delta}}$$
-
-And $m = \frac{n_0 \cdot n_1}{n_0 + n_1}$ (harmonic mean of window sizes)
-
----
-
-## 🎯 Use Cases
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        RECOMMENDED USE CASES                           │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  📈 FINANCIAL                  🏭 INDUSTRIAL                           │
-│  ├─ Stock price prediction     ├─ Equipment monitoring                 │
-│  ├─ Currency exchange rates    ├─ Predictive maintenance               │
-│  └─ Risk assessment            └─ Quality control                      │
-│                                                                        │
-│  🌤️ ENVIRONMENTAL              🏥 HEALTHCARE                           │
-│  ├─ Weather forecasting        ├─ Patient monitoring                   │
-│  ├─ Air quality prediction     ├─ Vital signs prediction               │
-│  └─ Energy demand              └─ Epidemic modeling                    │
-│                                                                        │
-│  🌐 IoT/EDGE                   📊 ANALYTICS                            │
-│  ├─ Sensor data prediction     ├─ User behavior prediction             │
-│  ├─ Anomaly detection          ├─ Demand forecasting                   │
-│  └─ Real-time adaptation       └─ Trend analysis                       │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## ❓ FAQ
-
-<details>
-<summary><strong>Q: How much data do I need to train the model?</strong></summary>
-
-The model can start making predictions after just one sample due to its online
-learning design. However, for reliable predictions:
-
-- **Minimum**: 10-20 samples
-- **Recommended**: 100+ samples
-- **Optimal**: 1000+ samples
-
-The model continuously improves as it sees more data.
-
-</details>
-
-<details>
-<summary><strong>Q: Can I use this for classification?</strong></summary>
-
-This library is specifically designed for **regression** tasks (predicting
-continuous values). For classification, you would need to:
-
-1. Modify the output layer to use softmax activation
-2. Change the loss function to cross-entropy
-3. Post-process outputs as probabilities
-
-Consider using a dedicated classification library instead.
-
-</details>
-
-<details>
-<summary><strong>Q: How do I handle missing data?</strong></summary>
-
-The library doesn't have built-in missing data handling. Recommended approaches:
-
-1. **Imputation**: Fill missing values with mean/median
-2. **Interpolation**: Use linear/spline interpolation
-3. **Skip**: Exclude samples with missing values
-4. **Masking**: Replace with a special value (e.g., 0) and rely on normalization
+#### Welford's Online Statistics
 
 ```typescript
-// Example: Mean imputation
-const fillMissing = (data: number[], mean: number) =>
-  data.map((v) => isNaN(v) ? mean : v);
+// Numerically stable one-pass mean/variance computation
+update(x):
+    n += 1
+    δ = x - μ
+    μ += δ / n
+    M₂ += δ × (x - μ)
+    σ² = M₂ / (n - 1)
 ```
 
-</details>
+#### ADWIN Drift Detection
 
-<details>
-<summary><strong>Q: What's the difference between `fitOnline` and batch training?</strong></summary>
+```typescript
+// Adaptive windowing for distribution change detection
+Drift condition: |μ_old - μ_new| ≥ √((1/2m) × ln(4n/δ))
+    where m = harmonic mean of window sizes
+```
 
-| Aspect     | `fitOnline` (This Library) | Traditional Batch   |
-| ---------- | -------------------------- | ------------------- |
-| Memory     | O(1) per sample            | O(n) for all data   |
-| Adaptation | Continuous                 | After retraining    |
-| Speed      | Instant updates            | Full epoch required |
-| Use Case   | Streaming data             | Static datasets     |
+#### He Weight Initialization
 
-</details>
+```typescript
+// Optimal initialization for ReLU networks
+W ~ N(0, √(2/fan_in))
+```
 
-<details>
-<summary><strong>Q: How do I know if my model is overfitting?</strong></summary>
+### Memory Optimization
 
-Signs of overfitting:
+The library uses `Float64Array` for all numerical computations and preallocates
+buffers to minimize garbage collection pressure:
 
-1. Very low training loss but poor predictions
-2. Large gap between training and validation loss
-3. Predictions that are too "confident" (narrow confidence intervals)
+```typescript
+// Internal buffer management
+- Activation buffers: Preallocated per layer
+- Gradient buffers: Reused across backward passes
+- Normalization buffers: Persistent across calls
+```
 
-Solutions:
+### Performance Tips
 
-- Increase `regularizationStrength`
-- Reduce `hiddenLayers` or `convolutionsPerLayer`
-- Collect more training data
-- Enable stronger outlier detection
-
-</details>
+1. **Batch Similar Samples**: Group similar samples in `fitOnline()` calls
+2. **Monitor Convergence**: Stop training when `converged === true`
+3. **Use Appropriate Model Size**: Start small, increase if underfitting
+4. **Enable Drift Detection**: Use ADWIN for streaming scenarios
 
 ---
 
-## 🤝 Contributing
+## 📊 Comparison with Traditional Methods
 
-Contributions are welcome! Please follow these steps:
+| Feature           | This Library | Traditional Polynomial | Deep Learning |
+| ----------------- | ------------ | ---------------------- | ------------- |
+| Online Learning   | ✅ Native    | ❌ Batch only          | ⚠️ Complex    |
+| Memory Efficiency | ✅ Constant  | ❌ O(n)                | ⚠️ Variable   |
+| Concept Drift     | ✅ ADWIN     | ❌ None                | ❌ Manual     |
+| Uncertainty       | ✅ Built-in  | ⚠️ Limited             | ❌ Separate   |
+| Dependencies      | ✅ Zero      | ✅ Zero                | ❌ Many       |
+| Setup Complexity  | ✅ Simple    | ✅ Simple              | ❌ Complex    |
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+---
 
 ## 📄 License
 
-MIT License - Henrique Emanoel Viana, 2025
+**MIT License** © 2025 Henrique Emanoel Viana
+
+---
+
+## 👤 Author
+
+<div align="center">
+
+**Henrique Emanoel Viana**
+
+[🐙 GitHub](https://github.com/hviana) • [📦 JSR](https://jsr.io/@hviana)
+
+</div>
 
 ---
 
 <div align="center">
 
-```
-═══════════════════════════════════════════════════════════════════
-   Made with ❤️ for the machine learning community
-   
-   ⭐ Star this repo if you find it useful!
-═══════════════════════════════════════════════════════════════════
-```
+Made with ❤️ for the community
 
-**[Back to Top](#-convolutionalregression)**
+**⭐ Star this repo if you find it useful!**
 
 </div>

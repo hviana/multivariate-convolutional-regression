@@ -20,7 +20,7 @@ DESIGN:
 - Inline math formula docs; normalize inputs; track running average loss for accuracy
 
 CONFIG (defaults):
-hiddenLayers: 2 (1-10), convolutionsPerLayer: 32 (1-256), kernelSize: 3, learningRate: 0.001, warmupSteps: 100, totalSteps: 10000, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, regularizationStrength: 1e-4, convergenceThreshold: 1e-6, outlierThreshold: 3.0, adwinDelta: 0.002
+hiddenLayers: 2, convolutionsPerLayer: 32, kernelSize: 3, learningRate: 0.001, warmupSteps: 100, totalSteps: 10000, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, regularizationStrength: 1e-4, convergenceThreshold: 1e-6, outlierThreshold: 3.0, adwinDelta: 0.002
 
 API:
 fitOnline({ xCoordinates: number[][], yCoordinates: number[][] }): FitResult → Incremental Adam, Welford's z-score, L2 reg, outlier downweighting, ADWIN drift detection
