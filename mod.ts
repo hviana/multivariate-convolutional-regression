@@ -1,115 +1,109 @@
 /**
- * ConvolutionalRegression - High-performance TypeScript library for convolutional
- * neural network based multivariate regression with incremental online learning.
+ * ConvolutionalRegression: Convolutional Neural Network for Multivariate Regression
+ * with Incremental Online Learning, Adam Optimizer, and Z-score Normalization
  *
- * Features:
- * - Conv1D layers with same padding and ReLU activation
- * - Adam optimizer with cosine warmup learning rate schedule
- * - Welford's algorithm for online z-score normalization
- * - L2 regularization, outlier downweighting, ADWIN drift detection
+ * Architecture: Input(inputDim) → [Conv1D(filters, kernelSize, same) → ReLU]×hiddenLayers → Flatten → Dense(outputDim)
  *
  * @module ConvolutionalRegression
- * @version 1.0.0
- * @author Henrique Emanoel Viana
  */
 
 // ============================================================================
-// Type Definitions & Interfaces
+// INTERFACES & TYPES
 // ============================================================================
 
 /**
- * Configuration options for ConvolutionalRegression model
+ * Configuration options for ConvolutionalRegression
  */
 export interface ConvolutionalRegressionConfig {
-  /** Number of hidden convolutional layers (1-10). Default: 2 */
+  /** Number of hidden convolutional layers (1-10, default: 2) */
   hiddenLayers?: number;
-  /** Number of convolution filters per layer (1-256). Default: 32 */
+  /** Number of convolution filters per layer (1-256, default: 32) */
   convolutionsPerLayer?: number;
-  /** Convolution kernel size. Default: 3 */
+  /** Size of convolution kernel (default: 3) */
   kernelSize?: number;
-  /** Base learning rate for Adam optimizer. Default: 0.001 */
+  /** Base learning rate for Adam optimizer (default: 0.001) */
   learningRate?: number;
-  /** Warmup steps for learning rate schedule. Default: 100 */
+  /** Number of warmup steps for learning rate schedule (default: 100) */
   warmupSteps?: number;
-  /** Total steps for cosine decay schedule. Default: 10000 */
+  /** Total training steps for cosine decay schedule (default: 10000) */
   totalSteps?: number;
-  /** Adam β₁ parameter (first moment decay). Default: 0.9 */
+  /** Adam β₁ - first moment decay (default: 0.9) */
   beta1?: number;
-  /** Adam β₂ parameter (second moment decay). Default: 0.999 */
+  /** Adam β₂ - second moment decay (default: 0.999) */
   beta2?: number;
-  /** Numerical stability constant. Default: 1e-8 */
+  /** Adam ε for numerical stability (default: 1e-8) */
   epsilon?: number;
-  /** L2 regularization strength. Default: 1e-4 */
+  /** L2 regularization strength λ (default: 1e-4) */
   regularizationStrength?: number;
-  /** Loss threshold for convergence detection. Default: 1e-6 */
+  /** Convergence threshold for loss (default: 1e-6) */
   convergenceThreshold?: number;
-  /** Z-score threshold for outlier detection. Default: 3.0 */
+  /** Z-score threshold for outlier detection (default: 3.0) */
   outlierThreshold?: number;
-  /** Delta parameter for ADWIN drift detection. Default: 0.002 */
+  /** ADWIN drift detection delta parameter (default: 0.002) */
   adwinDelta?: number;
 }
 
 /**
- * Result returned from online training step
+ * Result of a single online fitting step
  */
 export interface FitResult {
-  /** Current MSE loss value */
+  /** Current loss value: L = (1/2n)Σ‖y - ŷ‖² + (λ/2)Σ‖W‖² */
   loss: number;
-  /** L2 norm of gradient vector */
+  /** L2 norm of gradients: ‖∇L‖₂ */
   gradientNorm: number;
-  /** Effective learning rate after warmup/decay */
+  /** Current effective learning rate after warmup/decay */
   effectiveLearningRate: number;
-  /** Whether sample was flagged as outlier */
+  /** Whether current sample was detected as outlier */
   isOutlier: boolean;
-  /** Whether model has converged */
+  /** Whether model has converged (loss < threshold) */
   converged: boolean;
-  /** Index of most recently processed sample */
+  /** Current sample index */
   sampleIndex: number;
-  /** Whether concept drift was detected */
+  /** Whether concept drift was detected via ADWIN */
   driftDetected: boolean;
 }
 
 /**
- * Single prediction with uncertainty quantification
+ * Prediction result containing forecasts and confidence bounds
+ */
+export interface PredictionResult {
+  /** Array of predictions for each future step */
+  predictions: SinglePrediction[];
+  /** Model accuracy: 1/(1 + L̄) where L̄ is running average loss */
+  accuracy: number;
+  /** Number of samples the model was trained on */
+  sampleCount: number;
+  /** Whether the model is ready for predictions */
+  isModelReady: boolean;
+}
+
+/**
+ * Single prediction with confidence bounds
  */
 export interface SinglePrediction {
-  /** Point estimate of predicted values */
+  /** Predicted values for each output dimension */
   predicted: number[];
-  /** Lower bound of 95% confidence interval */
+  /** Lower confidence bound (95%) for each output dimension */
   lowerBound: number[];
-  /** Upper bound of 95% confidence interval */
+  /** Upper confidence bound (95%) for each output dimension */
   upperBound: number[];
   /** Standard error for each output dimension */
   standardError: number[];
 }
 
 /**
- * Result of prediction operation
- */
-export interface PredictionResult {
-  /** Predictions for each requested future step */
-  predictions: SinglePrediction[];
-  /** Model accuracy: 1/(1 + avgLoss) */
-  accuracy: number;
-  /** Total training samples processed */
-  sampleCount: number;
-  /** Whether model is ready for prediction */
-  isModelReady: boolean;
-}
-
-/**
- * Complete weight information for serialization/inspection
+ * Model weight information
  */
 export interface WeightInfo {
-  /** Conv layer kernels [layer][outCh][inCh*kSize] */
+  /** Convolution kernel weights [layer][filter][kernel_element] */
   kernels: number[][][];
-  /** Layer biases [layer][channel] */
+  /** Bias terms [layer][filter/neuron] */
   biases: number[][];
-  /** Adam first moment estimates */
+  /** First moment estimates for Adam [layer][filter][element] */
   firstMoment: number[][][];
-  /** Adam second moment estimates */
+  /** Second moment estimates for Adam [layer][filter][element] */
   secondMoment: number[][][];
-  /** Number of Adam updates performed */
+  /** Number of parameter updates performed */
   updateCount: number;
 }
 
@@ -117,105 +111,185 @@ export interface WeightInfo {
  * Normalization statistics from Welford's algorithm
  */
 export interface NormalizationStats {
-  /** Running mean of input features */
+  /** Running mean for each input dimension */
   inputMean: number[];
-  /** Running std of input features */
+  /** Running standard deviation for each input dimension */
   inputStd: number[];
-  /** Running mean of output features */
+  /** Running mean for each output dimension */
   outputMean: number[];
-  /** Running std of output features */
+  /** Running standard deviation for each output dimension */
   outputStd: number[];
-  /** Sample count for statistics */
+  /** Number of samples processed */
   count: number;
 }
 
 /**
- * Model configuration and state summary
+ * Model summary information
  */
 export interface ModelSummary {
-  /** Whether network has been initialized */
+  /** Whether the model has been initialized */
   isInitialized: boolean;
-  /** Auto-detected input dimension */
+  /** Number of input dimensions */
   inputDimension: number;
-  /** Auto-detected output dimension */
+  /** Number of output dimensions */
   outputDimension: number;
-  /** Number of hidden conv layers */
+  /** Number of hidden convolutional layers */
   hiddenLayers: number;
-  /** Filters per conv layer */
+  /** Number of convolution filters per layer */
   convolutionsPerLayer: number;
   /** Convolution kernel size */
   kernelSize: number;
-  /** Total trainable parameters */
+  /** Total number of trainable parameters */
   totalParameters: number;
-  /** Samples processed */
+  /** Number of samples processed */
   sampleCount: number;
-  /** Current accuracy metric */
+  /** Current model accuracy: 1/(1 + L̄) */
   accuracy: number;
-  /** Whether training converged */
+  /** Whether the model has converged */
   converged: boolean;
   /** Current effective learning rate */
   effectiveLearningRate: number;
-  /** Detected drift events */
+  /** Number of drift events detected */
   driftCount: number;
 }
 
-/**
- * Input data structure for training
- */
-export interface FitInput {
-  /** Input features: [numSamples][inputDim] */
-  xCoordinates: number[][];
-  /** Target outputs: [numSamples][outputDim] */
-  yCoordinates: number[][];
+// ============================================================================
+// INTERNAL TYPES
+// ============================================================================
+
+interface WelfordState {
+  mean: Float64Array;
+  m2: Float64Array;
+  count: number;
 }
 
-/**
- * Public interface for ConvolutionalRegression
- */
-export interface IConvolutionalRegression {
-  fitOnline(data: FitInput): FitResult;
-  predict(futureSteps: number): PredictionResult;
-  getModelSummary(): ModelSummary;
-  getWeights(): WeightInfo;
-  getNormalizationStats(): NormalizationStats;
-  reset(): void;
+interface AdamState {
+  m: Float64Array;
+  v: Float64Array;
+}
+
+interface ADWINBucket {
+  total: number;
+  variance: number;
+  count: number;
+}
+
+interface ConvLayer {
+  kernels: Float64Array;
+  biases: Float64Array;
+  kernelGrad: Float64Array;
+  biasGrad: Float64Array;
+  adamM: Float64Array;
+  adamV: Float64Array;
+  adamBiasM: Float64Array;
+  adamBiasV: Float64Array;
+  inputChannels: number;
+  outputChannels: number;
+}
+
+interface DenseLayer {
+  weights: Float64Array;
+  biases: Float64Array;
+  weightGrad: Float64Array;
+  biasGrad: Float64Array;
+  adamM: Float64Array;
+  adamV: Float64Array;
+  adamBiasM: Float64Array;
+  adamBiasV: Float64Array;
+  inputDim: number;
+  outputDim: number;
+}
+
+interface SerializedState {
+  config: ConvolutionalRegressionConfig;
+  model: {
+    isInitialized: boolean;
+    inputDim: number;
+    outputDim: number;
+    sampleCount: number;
+    updateCount: number;
+    totalLoss: number;
+    converged: boolean;
+    driftCount: number;
+  };
+  weights: {
+    convLayers: Array<{
+      kernels: number[];
+      biases: number[];
+      adamM: number[];
+      adamV: number[];
+      adamBiasM: number[];
+      adamBiasV: number[];
+      inputChannels: number;
+      outputChannels: number;
+    }>;
+    denseLayer: {
+      weights: number[];
+      biases: number[];
+      adamM: number[];
+      adamV: number[];
+      adamBiasM: number[];
+      adamBiasV: number[];
+      inputDim: number;
+      outputDim: number;
+    } | null;
+  } | null;
+  normalization: {
+    inputMean: number[];
+    inputM2: number[];
+    outputMean: number[];
+    outputM2: number[];
+    count: number;
+  } | null;
+  adwin: {
+    buckets: ADWINBucket[][];
+    total: number;
+    count: number;
+    width: number;
+  } | null;
 }
 
 // ============================================================================
-// Main Implementation
+// BUFFER POOL - Minimize allocations
 // ============================================================================
 
-/**
- * ConvolutionalRegression: High-performance CNN for multivariate regression
- * with incremental online learning capabilities.
- *
- * Architecture:
- * Input(inputDim) → [Conv1D(filters, kernelSize, same) → ReLU]×L → Flatten → Dense(outputDim)
- *
- * @example
- * ```typescript
- * const model = new ConvolutionalRegression({
- *   hiddenLayers: 2,
- *   convolutionsPerLayer: 32,
- *   learningRate: 0.001
- * });
- *
- * // Incremental training
- * const result = model.fitOnline({
- *   xCoordinates: [[1, 2, 3], [4, 5, 6]],
- *   yCoordinates: [[7, 8], [9, 10]]
- * });
- *
- * // Generate predictions
- * const predictions = model.predict(5);
- * console.log(predictions.predictions[0].predicted);
- * ```
- */
-export class ConvolutionalRegression implements IConvolutionalRegression {
-  // ========================================================================
-  // Configuration (immutable after construction)
-  // ========================================================================
+class BufferPool {
+  private readonly pools: Map<number, Float64Array[]> = new Map();
+  private readonly maxPoolSize: number = 8;
 
+  acquire(size: number): Float64Array {
+    const pool = this.pools.get(size);
+    if (pool !== undefined && pool.length > 0) {
+      const buffer = pool.pop()!;
+      buffer.fill(0);
+      return buffer;
+    }
+    return new Float64Array(size);
+  }
+
+  release(buffer: Float64Array): void {
+    const size = buffer.length;
+    let pool = this.pools.get(size);
+    if (pool === undefined) {
+      pool = [];
+      this.pools.set(size, pool);
+    }
+    if (pool.length < this.maxPoolSize) {
+      pool.push(buffer);
+    }
+  }
+
+  clear(): void {
+    this.pools.clear();
+  }
+}
+
+// ============================================================================
+// MAIN CLASS
+// ============================================================================
+
+export class ConvolutionalRegression {
+  // Configuration (readonly after construction)
   private readonly _hiddenLayers: number;
   private readonly _convolutionsPerLayer: number;
   private readonly _kernelSize: number;
@@ -230,306 +304,867 @@ export class ConvolutionalRegression implements IConvolutionalRegression {
   private readonly _outlierThreshold: number;
   private readonly _adwinDelta: number;
 
-  // ========================================================================
-  // Network Dimensions (lazy initialized)
-  // ========================================================================
+  // Model state
+  private _isInitialized: boolean = false;
+  private _inputDim: number = 0;
+  private _outputDim: number = 0;
+  private _spatialDim: number = 0;
+  private _flattenedDim: number = 0;
 
-  private _inputDim: number;
-  private _outputDim: number;
-  private _isInitialized: boolean;
-  private _flattenSize: number;
+  // Layers
+  private _convLayers: ConvLayer[] = [];
+  private _denseLayer: DenseLayer | null = null;
 
-  // ========================================================================
-  // Network Parameters - Preallocated Float64Arrays
-  // ========================================================================
+  // Normalization (Welford's algorithm)
+  private _inputWelford: WelfordState | null = null;
+  private _outputWelford: WelfordState | null = null;
 
-  /** Conv kernels[layer]: flattened (outCh × inCh × kernelSize) */
-  private _convKernels: Float64Array[];
-  /** Conv biases[layer]: (outChannels) */
-  private _convBiases: Float64Array[];
-  /** Dense weights: flattened (outputDim × flattenSize) */
-  private _denseWeights: Float64Array;
-  /** Dense biases: (outputDim) */
-  private _denseBiases: Float64Array;
+  // Training state
+  private _sampleCount: number = 0;
+  private _updateCount: number = 0;
+  private _totalLoss: number = 0;
+  private _converged: boolean = false;
+  private _driftCount: number = 0;
 
-  // ========================================================================
-  // Adam Optimizer State
-  // ========================================================================
+  // ADWIN state
+  private _adwinBuckets: ADWINBucket[][] = [];
+  private _adwinTotal: number = 0;
+  private _adwinCount: number = 0;
+  private _adwinWidth: number = 0;
 
-  /** First moment for conv kernels */
-  private _convKernelM: Float64Array[];
-  /** Second moment for conv kernels */
-  private _convKernelV: Float64Array[];
-  /** First moment for conv biases */
-  private _convBiasM: Float64Array[];
-  /** Second moment for conv biases */
-  private _convBiasV: Float64Array[];
-  /** First moment for dense weights */
-  private _denseWeightM: Float64Array;
-  /** Second moment for dense weights */
-  private _denseWeightV: Float64Array;
-  /** First moment for dense biases */
-  private _denseBiasM: Float64Array;
-  /** Second moment for dense biases */
-  private _denseBiasV: Float64Array;
+  // Preallocated buffers
+  private readonly _bufferPool: BufferPool = new BufferPool();
+  private _activations: Float64Array[] = [];
+  private _preActivations: Float64Array[] = [];
+  private _gradients: Float64Array[] = [];
+  private _inputBuffer: Float64Array | null = null;
+  private _outputBuffer: Float64Array | null = null;
+  private _targetBuffer: Float64Array | null = null;
+  private _lastInput: Float64Array | null = null;
 
-  // ========================================================================
-  // Welford's Algorithm State for Normalization
-  // ========================================================================
-
-  /** Running mean for inputs */
-  private _inputMean: Float64Array;
-  /** Running M₂ for inputs (variance computation) */
-  private _inputM2: Float64Array;
-  /** Running mean for outputs */
-  private _outputMean: Float64Array;
-  /** Running M₂ for outputs */
-  private _outputM2: Float64Array;
-  /** Running mean for prediction errors */
-  private _errorMean: Float64Array;
-  /** Running M₂ for prediction errors */
-  private _errorM2: Float64Array;
-
-  // ========================================================================
-  // Training State
-  // ========================================================================
-
-  private _sampleCount: number;
-  private _updateCount: number;
-  private _runningLoss: number;
-  private _lossCount: number;
-  private _converged: boolean;
-  private _driftCount: number;
-  private _effectiveLr: number;
-
-  // ========================================================================
-  // ADWIN Drift Detection State
-  // ========================================================================
-
-  private _adwinWindow: Float64Array;
-  private _adwinSize: number;
-  private readonly _adwinMaxSize: number;
-
-  // ========================================================================
-  // Preallocated Computation Buffers
-  // ========================================================================
-
-  /** Layer activations (post-ReLU): [layer][channels × spatial] */
-  private _activations: Float64Array[];
-  /** Pre-activation values (pre-ReLU) */
-  private _preActivations: Float64Array[];
-  /** Gradient buffers for backprop */
-  private _gradients: Float64Array[];
-  /** Temporary gradient storage for conv kernels */
-  private _gradKernelTemp: Float64Array[];
-  /** Temporary gradient storage for conv biases */
-  private _gradBiasTemp: Float64Array[];
-  /** Temporary gradient storage for dense weights */
-  private _gradDenseW: Float64Array;
-  /** Temporary gradient storage for dense biases */
-  private _gradDenseB: Float64Array;
-  /** Normalized input buffer */
-  private _normalizedInput: Float64Array;
-  /** Normalized target buffer */
-  private _normalizedTarget: Float64Array;
-  /** Prediction output buffer */
-  private _prediction: Float64Array;
-  /** Last input sample (for autoregressive prediction) */
-  private _lastInput: Float64Array;
-  /** Dense output gradient buffer */
-  private _denseOutputGrad: Float64Array;
-  /** Cached channel counts per layer */
-  private _inChannels: Int32Array;
-  /** Padding for convolution */
-  private _pad: number;
+  // Cached computations
+  private _cachedBeta1Power: number = 1;
+  private _cachedBeta2Power: number = 1;
 
   /**
    * Creates a new ConvolutionalRegression instance
    *
    * @param config - Configuration options
-   *
    * @example
    * ```typescript
    * const model = new ConvolutionalRegression({
-   *   hiddenLayers: 3,
-   *   convolutionsPerLayer: 64,
-   *   kernelSize: 5,
-   *   learningRate: 0.0005
+   *   hiddenLayers: 2,
+   *   convolutionsPerLayer: 32,
+   *   learningRate: 0.001
    * });
    * ```
    */
   constructor(config: ConvolutionalRegressionConfig = {}) {
-    // Validate and clamp configuration
     this._hiddenLayers = Math.max(1, Math.min(10, config.hiddenLayers ?? 2));
     this._convolutionsPerLayer = Math.max(
       1,
       Math.min(256, config.convolutionsPerLayer ?? 32),
     );
     this._kernelSize = Math.max(1, config.kernelSize ?? 3);
-    this._learningRate = Math.max(1e-10, config.learningRate ?? 0.001);
+    this._learningRate = config.learningRate ?? 0.001;
     this._warmupSteps = Math.max(0, config.warmupSteps ?? 100);
     this._totalSteps = Math.max(1, config.totalSteps ?? 10000);
-    this._beta1 = Math.max(0, Math.min(0.9999, config.beta1 ?? 0.9));
-    this._beta2 = Math.max(0, Math.min(0.9999, config.beta2 ?? 0.999));
-    this._epsilon = Math.max(1e-15, config.epsilon ?? 1e-8);
-    this._regularizationStrength = Math.max(
-      0,
-      config.regularizationStrength ?? 1e-4,
-    );
-    this._convergenceThreshold = Math.max(
-      0,
-      config.convergenceThreshold ?? 1e-6,
-    );
-    this._outlierThreshold = Math.max(0, config.outlierThreshold ?? 3.0);
-    this._adwinDelta = Math.max(1e-10, Math.min(1, config.adwinDelta ?? 0.002));
-    this._adwinMaxSize = 1000;
-
-    // Initialize to empty state
-    this._inputDim = 0;
-    this._outputDim = 0;
-    this._flattenSize = 0;
-    this._isInitialized = false;
-    this._pad = (this._kernelSize - 1) >> 1;
-
-    this._convKernels = [];
-    this._convBiases = [];
-    this._denseWeights = new Float64Array(0);
-    this._denseBiases = new Float64Array(0);
-
-    this._convKernelM = [];
-    this._convKernelV = [];
-    this._convBiasM = [];
-    this._convBiasV = [];
-    this._denseWeightM = new Float64Array(0);
-    this._denseWeightV = new Float64Array(0);
-    this._denseBiasM = new Float64Array(0);
-    this._denseBiasV = new Float64Array(0);
-
-    this._inputMean = new Float64Array(0);
-    this._inputM2 = new Float64Array(0);
-    this._outputMean = new Float64Array(0);
-    this._outputM2 = new Float64Array(0);
-    this._errorMean = new Float64Array(0);
-    this._errorM2 = new Float64Array(0);
-
-    this._sampleCount = 0;
-    this._updateCount = 0;
-    this._runningLoss = 0;
-    this._lossCount = 0;
-    this._converged = false;
-    this._driftCount = 0;
-    this._effectiveLr = 0;
-
-    this._adwinWindow = new Float64Array(this._adwinMaxSize);
-    this._adwinSize = 0;
-
-    this._activations = [];
-    this._preActivations = [];
-    this._gradients = [];
-    this._gradKernelTemp = [];
-    this._gradBiasTemp = [];
-    this._gradDenseW = new Float64Array(0);
-    this._gradDenseB = new Float64Array(0);
-    this._normalizedInput = new Float64Array(0);
-    this._normalizedTarget = new Float64Array(0);
-    this._prediction = new Float64Array(0);
-    this._lastInput = new Float64Array(0);
-    this._denseOutputGrad = new Float64Array(0);
-    this._inChannels = new Int32Array(0);
+    this._beta1 = config.beta1 ?? 0.9;
+    this._beta2 = config.beta2 ?? 0.999;
+    this._epsilon = config.epsilon ?? 1e-8;
+    this._regularizationStrength = config.regularizationStrength ?? 1e-4;
+    this._convergenceThreshold = config.convergenceThreshold ?? 1e-6;
+    this._outlierThreshold = config.outlierThreshold ?? 3.0;
+    this._adwinDelta = config.adwinDelta ?? 0.002;
   }
 
   /**
-   * Performs incremental online learning on provided data.
-   * Processes each sample sequentially with Adam optimizer.
+   * Performs incremental online training with a single batch
    *
    * Algorithm:
-   * 1. Normalize inputs: x̃ = (x - μ)/(σ + ε) using Welford's running stats
-   * 2. Forward: propagate through conv layers with ReLU activation
-   * 3. Loss: L = (1/2n)Σ‖y - ŷ‖² + (λ/2)Σ‖W‖²
-   * 4. Backprop: compute gradients via chain rule
-   * 5. Adam update: m = β₁m + (1-β₁)g, v = β₂v + (1-β₂)g²
-   * 6. Check for outliers and concept drift
+   * 1. Auto-detect dimensions and initialize network on first call
+   * 2. Update running statistics using Welford's algorithm: δ = x - μ, μ += δ/n, M₂ += δ(x - μ)
+   * 3. Normalize inputs: x̃ = (x - μ)/(σ + ε)
+   * 4. Forward pass: propagate through conv layers with ReLU, then dense layer
+   * 5. Compute loss: L = (1/2n)Σ‖y - ŷ‖² + (λ/2)Σ‖W‖²
+   * 6. Backpropagation: ∂L/∂W via chain rule
+   * 7. Adam update: m = β₁m + (1-β₁)g, v = β₂v + (1-β₂)g², W -= η(m̂)/(√v̂ + ε)
+   * 8. ADWIN drift detection: detect when |μ₀ - μ₁| ≥ εcut
    *
-   * @param data - Training data with xCoordinates and yCoordinates
-   * @returns Result of the last training step
-   *
+   * @param data - Training data with input and output coordinates
+   * @returns FitResult with training metrics
    * @example
    * ```typescript
    * const result = model.fitOnline({
-   *   xCoordinates: [[1, 2], [3, 4], [5, 6]],
-   *   yCoordinates: [[7], [8], [9]]
+   *   xCoordinates: [[1, 2, 3], [4, 5, 6]],
+   *   yCoordinates: [[7, 8], [9, 10]]
    * });
-   * console.log(`Loss: ${result.loss.toFixed(6)}`);
+   * console.log(`Loss: ${result.loss}, Converged: ${result.converged}`);
    * ```
    */
-  public fitOnline(data: FitInput): FitResult {
+  fitOnline(
+    data: { xCoordinates: number[][]; yCoordinates: number[][] },
+  ): FitResult {
     const { xCoordinates, yCoordinates } = data;
 
-    // Validate input
-    if (
-      !xCoordinates || !yCoordinates ||
-      xCoordinates.length === 0 || yCoordinates.length === 0
-    ) {
-      return this._emptyFitResult();
+    if (!xCoordinates || xCoordinates.length === 0) {
+      throw new Error("xCoordinates cannot be empty");
     }
-
+    if (!yCoordinates || yCoordinates.length === 0) {
+      throw new Error("yCoordinates cannot be empty");
+    }
     if (xCoordinates.length !== yCoordinates.length) {
-      throw new Error("xCoordinates and yCoordinates must have equal length");
+      throw new Error(
+        "xCoordinates and yCoordinates must have the same length",
+      );
     }
 
     // Lazy initialization on first call
     if (!this._isInitialized) {
-      this._inputDim = xCoordinates[0].length;
-      this._outputDim = yCoordinates[0].length;
+      this._initialize(xCoordinates[0].length, yCoordinates[0].length);
+    }
 
-      if (this._inputDim === 0 || this._outputDim === 0) {
-        throw new Error("Input and output dimensions must be positive");
+    const batchSize = xCoordinates.length;
+    let batchLoss = 0;
+    let batchGradNorm = 0;
+    let outlierCount = 0;
+    let driftDetected = false;
+
+    // Process each sample in the batch
+    for (let b = 0; b < batchSize; b++) {
+      const x = xCoordinates[b];
+      const y = yCoordinates[b];
+
+      // Update Welford statistics for normalization
+      this._updateWelford(this._inputWelford!, x);
+      this._updateWelford(this._outputWelford!, y);
+
+      // Normalize input: x̃ = (x - μ)/(σ + ε)
+      this._normalizeInput(x);
+
+      // Normalize target: ỹ = (y - μ)/(σ + ε)
+      this._normalizeTarget(y);
+
+      // Forward pass
+      this._forward();
+
+      // Compute loss and residuals
+      const loss = this._computeLoss();
+
+      // Outlier detection: r = (y - ŷ)/σ; |r| > threshold → outlier
+      const isOutlier = this._detectOutlier();
+      const sampleWeight = isOutlier ? 0.1 : 1.0;
+      if (isOutlier) outlierCount++;
+
+      // Backward pass with Adam update
+      const gradNorm = this._backward(sampleWeight);
+
+      // Accumulate batch statistics
+      batchLoss += loss * sampleWeight;
+      batchGradNorm += gradNorm * gradNorm;
+
+      // ADWIN drift detection
+      if (this._detectDrift(loss)) {
+        driftDetected = true;
+        this._handleDrift();
       }
 
-      this._initializeNetwork();
+      this._sampleCount++;
+
+      // Store last input for prediction
+      this._copyToLastInput(x);
     }
 
-    // Validate dimensions
-    if (
-      xCoordinates[0].length !== this._inputDim ||
-      yCoordinates[0].length !== this._outputDim
-    ) {
-      throw new Error("Input dimensions do not match initialized dimensions");
-    }
+    // Update total loss for accuracy calculation: L̄ = ΣLoss/n
+    this._totalLoss += batchLoss;
 
-    // Process samples incrementally
-    let result: FitResult = this._emptyFitResult();
-    const numSamples = xCoordinates.length;
+    const avgLoss = batchLoss / batchSize;
+    this._converged = avgLoss < this._convergenceThreshold;
 
-    for (let idx = 0; idx < numSamples; idx++) {
-      result = this._trainSample(xCoordinates[idx], yCoordinates[idx], idx);
-    }
-
-    return result;
+    return {
+      loss: avgLoss,
+      gradientNorm: Math.sqrt(batchGradNorm / batchSize),
+      effectiveLearningRate: this._getEffectiveLR(),
+      isOutlier: outlierCount > batchSize / 2,
+      converged: this._converged,
+      sampleIndex: this._sampleCount,
+      driftDetected,
+    };
   }
 
   /**
-   * Generates predictions for future steps with uncertainty estimates.
-   * Uses autoregressive prediction if input/output dimensions match.
+   * Initialize network architecture
    *
-   * Uncertainty: computed from prediction error statistics
-   * - standardError = σ_error / √n
-   * - 95% CI: predicted ± 1.96 × standardError
+   * Structure: Input(inputDim) → [Conv1D(filters, kernelSize, same) → ReLU]×hiddenLayers → Flatten → Dense(outputDim)
    *
-   * @param futureSteps - Number of steps to predict
-   * @returns Predictions with confidence intervals
+   * Weight initialization: He initialization W ~ N(0, √(2/fan_in))
+   */
+  private _initialize(inputDim: number, outputDim: number): void {
+    this._inputDim = inputDim;
+    this._outputDim = outputDim;
+    this._spatialDim = inputDim;
+
+    // Initialize Welford states
+    this._inputWelford = {
+      mean: new Float64Array(inputDim),
+      m2: new Float64Array(inputDim),
+      count: 0,
+    };
+    this._outputWelford = {
+      mean: new Float64Array(outputDim),
+      m2: new Float64Array(outputDim),
+      count: 0,
+    };
+
+    // Create conv layers
+    this._convLayers = [];
+    let inChannels = 1;
+
+    for (let l = 0; l < this._hiddenLayers; l++) {
+      const outChannels = this._convolutionsPerLayer;
+      const kernelElements = inChannels * this._kernelSize * outChannels;
+
+      // He initialization: std = √(2 / (inChannels * kernelSize))
+      const std = Math.sqrt(2.0 / (inChannels * this._kernelSize));
+
+      const kernels = new Float64Array(kernelElements);
+      for (let i = 0; i < kernelElements; i++) {
+        kernels[i] = this._randomNormal() * std;
+      }
+
+      this._convLayers.push({
+        kernels,
+        biases: new Float64Array(outChannels),
+        kernelGrad: new Float64Array(kernelElements),
+        biasGrad: new Float64Array(outChannels),
+        adamM: new Float64Array(kernelElements),
+        adamV: new Float64Array(kernelElements),
+        adamBiasM: new Float64Array(outChannels),
+        adamBiasV: new Float64Array(outChannels),
+        inputChannels: inChannels,
+        outputChannels: outChannels,
+      });
+
+      inChannels = outChannels;
+    }
+
+    // Flattened dimension after conv layers
+    this._flattenedDim = this._convolutionsPerLayer * this._spatialDim;
+
+    // Create dense layer
+    const denseWeights = this._flattenedDim * outputDim;
+    const denseStd = Math.sqrt(2.0 / this._flattenedDim);
+
+    const weights = new Float64Array(denseWeights);
+    for (let i = 0; i < denseWeights; i++) {
+      weights[i] = this._randomNormal() * denseStd;
+    }
+
+    this._denseLayer = {
+      weights,
+      biases: new Float64Array(outputDim),
+      weightGrad: new Float64Array(denseWeights),
+      biasGrad: new Float64Array(outputDim),
+      adamM: new Float64Array(denseWeights),
+      adamV: new Float64Array(denseWeights),
+      adamBiasM: new Float64Array(outputDim),
+      adamBiasV: new Float64Array(outputDim),
+      inputDim: this._flattenedDim,
+      outputDim,
+    };
+
+    // Preallocate activation buffers
+    this._activations = [];
+    this._preActivations = [];
+    this._gradients = [];
+
+    // Input activation (1 channel × spatialDim)
+    this._activations.push(new Float64Array(this._spatialDim));
+    this._preActivations.push(new Float64Array(this._spatialDim));
+
+    // Conv layer activations
+    for (let l = 0; l < this._hiddenLayers; l++) {
+      const size = this._convolutionsPerLayer * this._spatialDim;
+      this._activations.push(new Float64Array(size));
+      this._preActivations.push(new Float64Array(size));
+      this._gradients.push(new Float64Array(size));
+    }
+
+    // Dense layer output
+    this._activations.push(new Float64Array(outputDim));
+    this._gradients.push(new Float64Array(this._flattenedDim));
+    this._gradients.push(new Float64Array(outputDim));
+
+    // Working buffers
+    this._inputBuffer = new Float64Array(inputDim);
+    this._outputBuffer = new Float64Array(outputDim);
+    this._targetBuffer = new Float64Array(outputDim);
+    this._lastInput = new Float64Array(inputDim);
+
+    // Initialize ADWIN
+    this._adwinBuckets = [];
+    this._adwinTotal = 0;
+    this._adwinCount = 0;
+    this._adwinWidth = 0;
+
+    this._isInitialized = true;
+  }
+
+  /**
+   * Box-Muller transform for normal random numbers
+   * Returns sample from N(0, 1)
+   */
+  private _randomNormal(): number {
+    const u1 = Math.random() || 1e-10;
+    const u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+
+  /**
+   * Update Welford running statistics
    *
+   * Welford's algorithm for numerical stability:
+   * δ = x - μ
+   * μ += δ/n
+   * M₂ += δ(x - μ)
+   * σ² = M₂/(n-1)
+   */
+  private _updateWelford(state: WelfordState, values: number[]): void {
+    state.count++;
+    const n = state.count;
+    const mean = state.mean;
+    const m2 = state.m2;
+
+    for (let i = 0, len = values.length; i < len; i++) {
+      const x = values[i];
+      const delta = x - mean[i];
+      mean[i] += delta / n;
+      const delta2 = x - mean[i];
+      m2[i] += delta * delta2;
+    }
+  }
+
+  /**
+   * Normalize input using z-score: x̃ = (x - μ)/(σ + ε)
+   */
+  private _normalizeInput(input: number[]): void {
+    const state = this._inputWelford!;
+    const n = state.count;
+    const activation = this._activations[0];
+
+    for (let i = 0, len = this._inputDim; i < len; i++) {
+      const variance = n > 1 ? state.m2[i] / (n - 1) : 1;
+      const std = Math.sqrt(variance + this._epsilon);
+      activation[i] = (input[i] - state.mean[i]) / std;
+    }
+  }
+
+  /**
+   * Normalize target output
+   */
+  private _normalizeTarget(output: number[]): void {
+    const state = this._outputWelford!;
+    const n = state.count;
+    const target = this._targetBuffer!;
+
+    for (let i = 0, len = this._outputDim; i < len; i++) {
+      const variance = n > 1 ? state.m2[i] / (n - 1) : 1;
+      const std = Math.sqrt(variance + this._epsilon);
+      target[i] = (output[i] - state.mean[i]) / std;
+    }
+  }
+
+  /**
+   * Forward pass through the network
+   *
+   * Conv1D with same padding: y[c,i] = Σₖ Σⱼ(W[c,k,j] · x[k,i+j-pad]) + b[c]
+   * ReLU activation: a = max(0, z)
+   */
+  private _forward(): void {
+    const pad = Math.floor(this._kernelSize / 2);
+    const spatialDim = this._spatialDim;
+    const kernelSize = this._kernelSize;
+
+    // Forward through conv layers
+    for (let l = 0; l < this._hiddenLayers; l++) {
+      const layer = this._convLayers[l];
+      const input = this._activations[l];
+      const preAct = this._preActivations[l + 1];
+      const output = this._activations[l + 1];
+      const { kernels, biases, inputChannels, outputChannels } = layer;
+
+      // Clear pre-activation buffer
+      preAct.fill(0);
+
+      // Conv1D: y[oc,i] = Σ(ic) Σ(k) W[oc,ic,k] · x[ic, i+k-pad] + b[oc]
+      for (let oc = 0; oc < outputChannels; oc++) {
+        const bias = biases[oc];
+
+        for (let i = 0; i < spatialDim; i++) {
+          let sum = bias;
+
+          for (let ic = 0; ic < inputChannels; ic++) {
+            const kernelBase = (oc * inputChannels + ic) * kernelSize;
+            const inputBase = ic * spatialDim;
+
+            for (let k = 0; k < kernelSize; k++) {
+              const inputIdx = i + k - pad;
+              // Same padding: clamp to valid range
+              const clampedIdx = inputIdx < 0
+                ? 0
+                : (inputIdx >= spatialDim ? spatialDim - 1 : inputIdx);
+              sum += kernels[kernelBase + k] * input[inputBase + clampedIdx];
+            }
+          }
+
+          const outIdx = oc * spatialDim + i;
+          preAct[outIdx] = sum;
+          // ReLU: a = max(0, z)
+          output[outIdx] = sum > 0 ? sum : 0;
+        }
+      }
+    }
+
+    // Dense layer forward: y = Wx + b
+    const flattenedInput = this._activations[this._hiddenLayers];
+    const denseOutput = this._activations[this._hiddenLayers + 1];
+    const dense = this._denseLayer!;
+
+    for (let o = 0; o < dense.outputDim; o++) {
+      let sum = dense.biases[o];
+      const weightBase = o * dense.inputDim;
+
+      for (let i = 0; i < dense.inputDim; i++) {
+        sum += dense.weights[weightBase + i] * flattenedInput[i];
+      }
+
+      denseOutput[o] = sum;
+    }
+  }
+
+  /**
+   * Compute MSE loss with L2 regularization
+   *
+   * L = (1/2n)Σ‖y - ŷ‖² + (λ/2)Σ‖W‖²
+   */
+  private _computeLoss(): number {
+    const output = this._activations[this._hiddenLayers + 1];
+    const target = this._targetBuffer!;
+    const outputGrad = this._gradients[this._gradients.length - 1];
+
+    let mse = 0;
+    const n = this._outputDim;
+
+    // MSE component and output gradient
+    for (let i = 0; i < n; i++) {
+      const diff = output[i] - target[i];
+      outputGrad[i] = diff / n;
+      mse += diff * diff;
+    }
+    mse /= 2 * n;
+
+    // L2 regularization: (λ/2)Σ‖W‖²
+    let l2 = 0;
+
+    for (let l = 0; l < this._hiddenLayers; l++) {
+      const kernels = this._convLayers[l].kernels;
+      for (let i = 0, len = kernels.length; i < len; i++) {
+        l2 += kernels[i] * kernels[i];
+      }
+    }
+
+    const denseWeights = this._denseLayer!.weights;
+    for (let i = 0, len = denseWeights.length; i < len; i++) {
+      l2 += denseWeights[i] * denseWeights[i];
+    }
+
+    return mse + (this._regularizationStrength / 2) * l2;
+  }
+
+  /**
+   * Detect outlier based on standardized residuals
+   * r = (y - ŷ)/σ; |r| > threshold → outlier
+   */
+  private _detectOutlier(): boolean {
+    const output = this._activations[this._hiddenLayers + 1];
+    const target = this._targetBuffer!;
+    const state = this._outputWelford!;
+    const n = state.count;
+
+    if (n < 2) return false;
+
+    for (let i = 0; i < this._outputDim; i++) {
+      const variance = state.m2[i] / (n - 1);
+      const std = Math.sqrt(variance + this._epsilon);
+      const residual = Math.abs(output[i] - target[i]) / std;
+
+      if (residual > this._outlierThreshold) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Backward pass with Adam optimizer
+   *
+   * Gradient computation:
+   * ∂L/∂W[conv] = upstream_grad * local_grad (via chain rule)
+   * ∂Conv/∂W: gradient w.r.t kernel weights
+   *
+   * Adam update:
+   * m = β₁m + (1-β₁)g
+   * v = β₂v + (1-β₂)g²
+   * m̂ = m/(1-β₁ᵗ)
+   * v̂ = v/(1-β₂ᵗ)
+   * W -= η · m̂/(√v̂ + ε)
+   */
+  private _backward(sampleWeight: number): number {
+    this._updateCount++;
+
+    // Update cached powers for bias correction
+    this._cachedBeta1Power *= this._beta1;
+    this._cachedBeta2Power *= this._beta2;
+
+    const lr = this._getEffectiveLR();
+    const beta1 = this._beta1;
+    const beta2 = this._beta2;
+    const eps = this._epsilon;
+    const lambda = this._regularizationStrength;
+    const bias1Correction = 1 - this._cachedBeta1Power;
+    const bias2Correction = 1 - this._cachedBeta2Power;
+
+    let gradNormSq = 0;
+
+    // Dense layer backward
+    const denseInput = this._activations[this._hiddenLayers];
+    const denseOutputGrad = this._gradients[this._gradients.length - 1];
+    const denseInputGrad = this._gradients[this._gradients.length - 2];
+    const dense = this._denseLayer!;
+
+    // Compute input gradient for dense layer
+    denseInputGrad.fill(0);
+    for (let o = 0; o < dense.outputDim; o++) {
+      const grad = denseOutputGrad[o] * sampleWeight;
+      const weightBase = o * dense.inputDim;
+
+      for (let i = 0; i < dense.inputDim; i++) {
+        denseInputGrad[i] += dense.weights[weightBase + i] * grad;
+      }
+    }
+
+    // Update dense weights with Adam
+    for (let o = 0; o < dense.outputDim; o++) {
+      const grad = denseOutputGrad[o] * sampleWeight;
+      const weightBase = o * dense.inputDim;
+
+      for (let i = 0; i < dense.inputDim; i++) {
+        const idx = weightBase + i;
+        const g = grad * denseInput[i] + lambda * dense.weights[idx];
+        gradNormSq += g * g;
+
+        // Adam: m = β₁m + (1-β₁)g
+        dense.adamM[idx] = beta1 * dense.adamM[idx] + (1 - beta1) * g;
+        // Adam: v = β₂v + (1-β₂)g²
+        dense.adamV[idx] = beta2 * dense.adamV[idx] + (1 - beta2) * g * g;
+
+        // Bias-corrected estimates and update
+        const mHat = dense.adamM[idx] / bias1Correction;
+        const vHat = dense.adamV[idx] / bias2Correction;
+        dense.weights[idx] -= lr * mHat / (Math.sqrt(vHat) + eps);
+      }
+    }
+
+    // Update dense biases with Adam
+    for (let o = 0; o < dense.outputDim; o++) {
+      const g = denseOutputGrad[o] * sampleWeight;
+      gradNormSq += g * g;
+
+      dense.adamBiasM[o] = beta1 * dense.adamBiasM[o] + (1 - beta1) * g;
+      dense.adamBiasV[o] = beta2 * dense.adamBiasV[o] + (1 - beta2) * g * g;
+
+      const mHat = dense.adamBiasM[o] / bias1Correction;
+      const vHat = dense.adamBiasV[o] / bias2Correction;
+      dense.biases[o] -= lr * mHat / (Math.sqrt(vHat) + eps);
+    }
+
+    // Conv layers backward (reverse order)
+    const pad = Math.floor(this._kernelSize / 2);
+    const spatialDim = this._spatialDim;
+    const kernelSize = this._kernelSize;
+
+    let upstream = denseInputGrad;
+
+    for (let l = this._hiddenLayers - 1; l >= 0; l--) {
+      const layer = this._convLayers[l];
+      const {
+        kernels,
+        biases,
+        adamM,
+        adamV,
+        adamBiasM,
+        adamBiasV,
+        inputChannels,
+        outputChannels,
+      } = layer;
+      const input = this._activations[l];
+      const preAct = this._preActivations[l + 1];
+      const downstream = l > 0 ? this._gradients[l - 1] : null;
+
+      // Apply ReLU derivative to upstream gradient
+      // ReLU'(x) = 1 if x > 0, else 0
+      for (let i = 0, len = upstream.length; i < len; i++) {
+        upstream[i] = preAct[i] > 0 ? upstream[i] * sampleWeight : 0;
+      }
+
+      // Initialize downstream gradient if needed
+      if (downstream) {
+        downstream.fill(0);
+      }
+
+      // Compute gradients and update
+      for (let oc = 0; oc < outputChannels; oc++) {
+        // Bias gradient
+        let biasGrad = 0;
+        for (let i = 0; i < spatialDim; i++) {
+          biasGrad += upstream[oc * spatialDim + i];
+        }
+        gradNormSq += biasGrad * biasGrad;
+
+        // Update bias with Adam
+        adamBiasM[oc] = beta1 * adamBiasM[oc] + (1 - beta1) * biasGrad;
+        adamBiasV[oc] = beta2 * adamBiasV[oc] +
+          (1 - beta2) * biasGrad * biasGrad;
+        const bMHat = adamBiasM[oc] / bias1Correction;
+        const bVHat = adamBiasV[oc] / bias2Correction;
+        biases[oc] -= lr * bMHat / (Math.sqrt(bVHat) + eps);
+
+        // Kernel gradients and input gradients
+        for (let ic = 0; ic < inputChannels; ic++) {
+          const kernelBase = (oc * inputChannels + ic) * kernelSize;
+          const inputBase = ic * spatialDim;
+
+          for (let k = 0; k < kernelSize; k++) {
+            let kernelGrad = lambda * kernels[kernelBase + k];
+
+            for (let i = 0; i < spatialDim; i++) {
+              const inputIdx = i + k - pad;
+              const clampedIdx = inputIdx < 0
+                ? 0
+                : (inputIdx >= spatialDim ? spatialDim - 1 : inputIdx);
+              const upstreamVal = upstream[oc * spatialDim + i];
+
+              kernelGrad += upstreamVal * input[inputBase + clampedIdx];
+
+              // Accumulate input gradient
+              if (downstream && inputIdx >= 0 && inputIdx < spatialDim) {
+                downstream[inputBase + inputIdx] += kernels[kernelBase + k] *
+                  upstreamVal;
+              }
+            }
+
+            gradNormSq += kernelGrad * kernelGrad;
+
+            // Update kernel with Adam
+            const idx = kernelBase + k;
+            adamM[idx] = beta1 * adamM[idx] + (1 - beta1) * kernelGrad;
+            adamV[idx] = beta2 * adamV[idx] +
+              (1 - beta2) * kernelGrad * kernelGrad;
+            const mHat = adamM[idx] / bias1Correction;
+            const vHat = adamV[idx] / bias2Correction;
+            kernels[idx] -= lr * mHat / (Math.sqrt(vHat) + eps);
+          }
+        }
+      }
+
+      if (downstream) {
+        upstream = downstream;
+      }
+    }
+
+    return Math.sqrt(gradNormSq);
+  }
+
+  /**
+   * Get effective learning rate with warmup and cosine decay
+   *
+   * Warmup (t < warmupSteps): lr = baseLR × (t / warmupSteps)
+   * Cosine decay: lr = baseLR × 0.5 × (1 + cos(π × progress))
+   * where progress = (t - warmupSteps) / (totalSteps - warmupSteps)
+   */
+  private _getEffectiveLR(): number {
+    const t = this._updateCount;
+
+    if (t < this._warmupSteps) {
+      // Linear warmup
+      return this._learningRate * (t + 1) / this._warmupSteps;
+    }
+
+    // Cosine decay
+    const progress = (t - this._warmupSteps) /
+      Math.max(1, this._totalSteps - this._warmupSteps);
+    const clampedProgress = Math.min(1, progress);
+    return this._learningRate * 0.5 * (1 + Math.cos(Math.PI * clampedProgress));
+  }
+
+  /**
+   * ADWIN drift detection
+   *
+   * Adaptive windowing: maintains error history, detects drift when
+   * |μ₀ - μ₁| ≥ εcut where εcut = √((2/m)·ln(2/δ))
+   */
+  private _detectDrift(loss: number): boolean {
+    // Add to window
+    this._adwinTotal += loss;
+    this._adwinCount++;
+    this._adwinWidth++;
+
+    // Add new bucket at level 0
+    if (this._adwinBuckets.length === 0) {
+      this._adwinBuckets.push([]);
+    }
+    this._adwinBuckets[0].push({ total: loss, variance: 0, count: 1 });
+
+    // Compress buckets (exponential histogram)
+    this._compressBuckets();
+
+    // Check for drift
+    if (this._adwinWidth < 10) return false;
+
+    return this._checkDriftCondition();
+  }
+
+  /**
+   * Compress ADWIN buckets using exponential histogram
+   */
+  private _compressBuckets(): void {
+    const maxBuckets = 2;
+
+    for (let level = 0; level < this._adwinBuckets.length; level++) {
+      while (this._adwinBuckets[level].length > maxBuckets) {
+        const b1 = this._adwinBuckets[level].shift()!;
+        const b2 = this._adwinBuckets[level].shift()!;
+
+        const merged: ADWINBucket = {
+          total: b1.total + b2.total,
+          variance: 0,
+          count: b1.count + b2.count,
+        };
+
+        if (level + 1 >= this._adwinBuckets.length) {
+          this._adwinBuckets.push([]);
+        }
+        this._adwinBuckets[level + 1].push(merged);
+      }
+    }
+  }
+
+  /**
+   * Check ADWIN drift condition: |μ₀ - μ₁| ≥ εcut
+   */
+  private _checkDriftCondition(): boolean {
+    const totalN = this._adwinWidth;
+    if (totalN < 2) return false;
+
+    let n0 = 0;
+    let sum0 = 0;
+
+    // Iterate through buckets from oldest to newest
+    for (let level = this._adwinBuckets.length - 1; level >= 0; level--) {
+      const buckets = this._adwinBuckets[level];
+      for (let i = 0; i < buckets.length; i++) {
+        const bucket = buckets[i];
+        n0 += bucket.count;
+        sum0 += bucket.total;
+
+        const n1 = totalN - n0;
+        const sum1 = this._adwinTotal - sum0;
+
+        if (n0 > 0 && n1 > 0) {
+          const mean0 = sum0 / n0;
+          const mean1 = sum1 / n1;
+          const m = 1.0 / (1.0 / n0 + 1.0 / n1);
+          const epsCut = Math.sqrt(2.0 / m * Math.log(2.0 / this._adwinDelta));
+
+          if (Math.abs(mean0 - mean1) >= epsCut) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle detected drift by shrinking window and partially resetting stats
+   */
+  private _handleDrift(): void {
+    this._driftCount++;
+
+    // Remove oldest buckets until drift condition no longer holds
+    while (this._adwinBuckets.length > 0) {
+      const lastLevel = this._adwinBuckets.length - 1;
+      if (this._adwinBuckets[lastLevel].length === 0) {
+        this._adwinBuckets.pop();
+        continue;
+      }
+
+      const oldBucket = this._adwinBuckets[lastLevel].pop()!;
+      this._adwinTotal -= oldBucket.total;
+      this._adwinCount -= oldBucket.count;
+      this._adwinWidth -= oldBucket.count;
+
+      if (!this._checkDriftCondition()) {
+        break;
+      }
+    }
+
+    // Decay normalization statistics
+    const decayFactor = 0.5;
+    if (this._inputWelford) {
+      const m2 = this._inputWelford.m2;
+      for (let i = 0, len = m2.length; i < len; i++) {
+        m2[i] *= decayFactor;
+      }
+    }
+    if (this._outputWelford) {
+      const m2 = this._outputWelford.m2;
+      for (let i = 0, len = m2.length; i < len; i++) {
+        m2[i] *= decayFactor;
+      }
+    }
+  }
+
+  /**
+   * Copy input to lastInput buffer for predictions
+   */
+  private _copyToLastInput(input: number[]): void {
+    const last = this._lastInput!;
+    for (let i = 0, len = input.length; i < len; i++) {
+      last[i] = input[i];
+    }
+  }
+
+  /**
+   * Generate predictions for future steps
+   *
+   * Uses autoregressive prediction: output at step t becomes input for step t+1
+   * Confidence bounds computed from output variance with increasing uncertainty
+   *
+   * @param futureSteps - Number of future steps to predict
+   * @returns PredictionResult with predictions and confidence bounds
    * @example
    * ```typescript
-   * const result = model.predict(10);
+   * const result = model.predict(5);
    * for (const pred of result.predictions) {
-   *   console.log(`Value: ${pred.predicted[0].toFixed(4)}`);
-   *   console.log(`95% CI: [${pred.lowerBound[0].toFixed(4)}, ${pred.upperBound[0].toFixed(4)}]`);
+   *   console.log(`Predicted: ${pred.predicted}, Bounds: [${pred.lowerBound}, ${pred.upperBound}]`);
    * }
    * ```
    */
-  public predict(futureSteps: number): PredictionResult {
-    if (!this._isInitialized || futureSteps <= 0) {
+  predict(futureSteps: number): PredictionResult {
+    if (!this._isInitialized || this._sampleCount < 1) {
       return {
         predictions: [],
         accuracy: 0,
@@ -539,69 +1174,72 @@ export class ConvolutionalRegression implements IConvolutionalRegression {
     }
 
     const predictions: SinglePrediction[] = [];
-    const isAutoregressive = this._inputDim === this._outputDim;
-    const standardError = this._computeStandardError();
+    const accuracy = 1 / (1 + this._totalLoss / this._sampleCount);
 
-    // Create working buffer for current input
-    const currentInput = new Float64Array(this._inputDim);
-    const currentNormalized = new Float64Array(this._inputDim);
+    // Get output standard deviations for confidence bounds
+    const outputState = this._outputWelford!;
+    const n = outputState.count;
+    const outputStds: number[] = new Array(this._outputDim);
 
-    // Initialize with last seen input
-    for (let i = 0; i < this._inputDim; i++) {
-      currentInput[i] = this._lastInput[i];
+    for (let i = 0; i < this._outputDim; i++) {
+      const variance = n > 1 ? outputState.m2[i] / (n - 1) : 1;
+      outputStds[i] = Math.sqrt(variance + this._epsilon);
     }
 
+    // Use last input as starting point
+    const currentInput = this._bufferPool.acquire(this._inputDim);
+    currentInput.set(this._lastInput!);
+
     for (let step = 0; step < futureSteps; step++) {
-      // Normalize current input
-      this._normalizeInPlace(
-        currentInput,
-        this._inputMean,
-        this._inputM2,
-        currentNormalized,
-      );
+      // Normalize input
+      this._normalizeInputBuffer(currentInput);
 
       // Forward pass
-      this._forward(currentNormalized);
+      this._forward();
 
-      // Denormalize prediction
-      const predicted = new Array<number>(this._outputDim);
-      const lowerBound = new Array<number>(this._outputDim);
-      const upperBound = new Array<number>(this._outputDim);
-      const se = new Array<number>(this._outputDim);
+      // Get normalized output
+      const normalizedOutput = this._activations[this._hiddenLayers + 1];
 
-      for (let j = 0; j < this._outputDim; j++) {
-        const variance = this._sampleCount > 1
-          ? this._outputM2[j] / (this._sampleCount - 1)
-          : 1.0;
+      // Denormalize to original scale
+      const predicted: number[] = new Array(this._outputDim);
+      const lowerBound: number[] = new Array(this._outputDim);
+      const upperBound: number[] = new Array(this._outputDim);
+      const standardError: number[] = new Array(this._outputDim);
+
+      // 95% confidence interval with increasing uncertainty
+      const confidenceMultiplier = 1.96 * Math.sqrt(1 + step * 0.1);
+
+      for (let i = 0; i < this._outputDim; i++) {
+        const variance = n > 1 ? outputState.m2[i] / (n - 1) : 1;
         const std = Math.sqrt(variance + this._epsilon);
-        const pred = this._prediction[j] * std + this._outputMean[j];
 
-        predicted[j] = pred;
-        se[j] = standardError[j];
-        lowerBound[j] = pred - 1.96 * se[j];
-        upperBound[j] = pred + 1.96 * se[j];
+        predicted[i] = normalizedOutput[i] * std + outputState.mean[i];
+
+        const bound = confidenceMultiplier * outputStds[i];
+        lowerBound[i] = predicted[i] - bound;
+        upperBound[i] = predicted[i] + bound;
+        standardError[i] = outputStds[i] / Math.sqrt(Math.max(1, n)) *
+          Math.sqrt(1 + step * 0.1);
       }
 
-      predictions.push({
-        predicted,
-        lowerBound,
-        upperBound,
-        standardError: se,
-      });
+      predictions.push({ predicted, lowerBound, upperBound, standardError });
 
-      // Autoregressive: use prediction as next input
-      if (isAutoregressive) {
-        for (let j = 0; j < this._outputDim; j++) {
-          currentInput[j] = predicted[j];
+      // Autoregressive: shift input and append prediction
+      if (this._outputDim <= this._inputDim) {
+        for (let i = 0; i < this._inputDim - this._outputDim; i++) {
+          currentInput[i] = currentInput[i + this._outputDim];
+        }
+        for (let i = 0; i < this._outputDim; i++) {
+          currentInput[this._inputDim - this._outputDim + i] = predicted[i];
+        }
+      } else {
+        for (let i = 0; i < this._inputDim; i++) {
+          currentInput[i] = predicted[i % this._outputDim];
         }
       }
     }
 
-    // Accuracy: 1/(1 + avgLoss)
-    const avgLoss = this._lossCount > 0
-      ? this._runningLoss / this._lossCount
-      : 1;
-    const accuracy = 1 / (1 + avgLoss);
+    this._bufferPool.release(currentInput);
 
     return {
       predictions,
@@ -612,34 +1250,48 @@ export class ConvolutionalRegression implements IConvolutionalRegression {
   }
 
   /**
-   * Returns model configuration and current state summary
+   * Normalize input buffer in-place
+   */
+  private _normalizeInputBuffer(input: Float64Array): void {
+    const state = this._inputWelford!;
+    const n = state.count;
+    const activation = this._activations[0];
+
+    for (let i = 0; i < this._inputDim; i++) {
+      const variance = n > 1 ? state.m2[i] / (n - 1) : 1;
+      const std = Math.sqrt(variance + this._epsilon);
+      activation[i] = (input[i] - state.mean[i]) / std;
+    }
+  }
+
+  /**
+   * Get comprehensive model summary
    *
-   * @returns Model summary
-   *
+   * @returns ModelSummary with architecture and training details
    * @example
    * ```typescript
    * const summary = model.getModelSummary();
-   * console.log(`Parameters: ${summary.totalParameters}`);
-   * console.log(`Accuracy: ${(summary.accuracy * 100).toFixed(2)}%`);
+   * console.log(`Parameters: ${summary.totalParameters}, Accuracy: ${summary.accuracy}`);
    * ```
    */
-  public getModelSummary(): ModelSummary {
-    let totalParams = 0;
+  getModelSummary(): ModelSummary {
+    let totalParameters = 0;
 
     if (this._isInitialized) {
       // Conv layer parameters
-      for (let layer = 0; layer < this._hiddenLayers; layer++) {
-        totalParams += this._convKernels[layer].length;
-        totalParams += this._convBiases[layer].length;
+      for (const layer of this._convLayers) {
+        totalParameters += layer.kernels.length + layer.biases.length;
       }
       // Dense layer parameters
-      totalParams += this._denseWeights.length;
-      totalParams += this._denseBiases.length;
+      if (this._denseLayer) {
+        totalParameters += this._denseLayer.weights.length +
+          this._denseLayer.biases.length;
+      }
     }
 
-    const avgLoss = this._lossCount > 0
-      ? this._runningLoss / this._lossCount
-      : 1;
+    const avgLoss = this._sampleCount > 0
+      ? this._totalLoss / this._sampleCount
+      : 0;
 
     return {
       isInitialized: this._isInitialized,
@@ -648,95 +1300,66 @@ export class ConvolutionalRegression implements IConvolutionalRegression {
       hiddenLayers: this._hiddenLayers,
       convolutionsPerLayer: this._convolutionsPerLayer,
       kernelSize: this._kernelSize,
-      totalParameters: totalParams,
+      totalParameters,
       sampleCount: this._sampleCount,
       accuracy: 1 / (1 + avgLoss),
       converged: this._converged,
-      effectiveLearningRate: this._effectiveLr,
+      effectiveLearningRate: this._getEffectiveLR(),
       driftCount: this._driftCount,
     };
   }
 
   /**
-   * Returns all model weights and Adam optimizer state
+   * Get current model weights and Adam optimizer states
    *
-   * @returns Weight information for serialization
-   *
+   * @returns WeightInfo containing all trainable parameters
    * @example
    * ```typescript
    * const weights = model.getWeights();
-   * // Serialize for storage
-   * const serialized = JSON.stringify(weights);
+   * console.log(`Layers: ${weights.kernels.length}, Updates: ${weights.updateCount}`);
    * ```
    */
-  public getWeights(): WeightInfo {
+  getWeights(): WeightInfo {
     const kernels: number[][][] = [];
     const biases: number[][] = [];
     const firstMoment: number[][][] = [];
     const secondMoment: number[][][] = [];
 
-    if (!this._isInitialized) {
-      return { kernels, biases, firstMoment, secondMoment, updateCount: 0 };
-    }
+    if (this._isInitialized) {
+      // Conv layers
+      for (const layer of this._convLayers) {
+        const layerKernels: number[][] = [];
+        const layerM: number[][] = [];
+        const layerV: number[][] = [];
 
-    // Conv layers
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      const inCh = this._inChannels[layer];
-      const outCh = this._convolutionsPerLayer;
-      const layerKernels: number[][] = [];
-      const layerM: number[][] = [];
-      const layerV: number[][] = [];
-
-      for (let o = 0; o < outCh; o++) {
-        const filterSize = inCh * this._kernelSize;
-        const kernelRow: number[] = new Array(filterSize);
-        const mRow: number[] = new Array(filterSize);
-        const vRow: number[] = new Array(filterSize);
-
-        for (let k = 0; k < filterSize; k++) {
-          const idx = o * filterSize + k;
-          kernelRow[k] = this._convKernels[layer][idx];
-          mRow[k] = this._convKernelM[layer][idx];
-          vRow[k] = this._convKernelV[layer][idx];
+        const kernelSize = layer.kernels.length / layer.outputChannels;
+        for (let oc = 0; oc < layer.outputChannels; oc++) {
+          const start = oc * kernelSize;
+          layerKernels.push(
+            Array.from(layer.kernels.subarray(start, start + kernelSize)),
+          );
+          layerM.push(
+            Array.from(layer.adamM.subarray(start, start + kernelSize)),
+          );
+          layerV.push(
+            Array.from(layer.adamV.subarray(start, start + kernelSize)),
+          );
         }
 
-        layerKernels.push(kernelRow);
-        layerM.push(mRow);
-        layerV.push(vRow);
+        kernels.push(layerKernels);
+        biases.push(Array.from(layer.biases));
+        firstMoment.push(layerM);
+        secondMoment.push(layerV);
       }
 
-      kernels.push(layerKernels);
-      biases.push(Array.from(this._convBiases[layer]));
-      firstMoment.push(layerM);
-      secondMoment.push(layerV);
-    }
-
-    // Dense layer
-    const denseKernels: number[][] = [];
-    const denseM: number[][] = [];
-    const denseV: number[][] = [];
-
-    for (let o = 0; o < this._outputDim; o++) {
-      const row: number[] = new Array(this._flattenSize);
-      const mRow: number[] = new Array(this._flattenSize);
-      const vRow: number[] = new Array(this._flattenSize);
-
-      for (let i = 0; i < this._flattenSize; i++) {
-        const idx = o * this._flattenSize + i;
-        row[i] = this._denseWeights[idx];
-        mRow[i] = this._denseWeightM[idx];
-        vRow[i] = this._denseWeightV[idx];
+      // Dense layer
+      if (this._denseLayer) {
+        kernels.push([Array.from(this._denseLayer.weights)]);
+        biases.push(Array.from(this._denseLayer.biases));
+        firstMoment.push([Array.from(this._denseLayer.adamM)]);
+        secondMoment.push([Array.from(this._denseLayer.adamV)]);
       }
-
-      denseKernels.push(row);
-      denseM.push(mRow);
-      denseV.push(vRow);
     }
-
-    kernels.push(denseKernels);
-    biases.push(Array.from(this._denseBiases));
-    firstMoment.push(denseM);
-    secondMoment.push(denseV);
 
     return {
       kernels,
@@ -748,811 +1371,291 @@ export class ConvolutionalRegression implements IConvolutionalRegression {
   }
 
   /**
-   * Returns normalization statistics from Welford's algorithm
+   * Get normalization statistics from Welford's algorithm
    *
-   * Welford's online algorithm:
-   * - δ = x - μ
-   * - μ += δ/n
-   * - M₂ += δ(x - μ)
-   * - σ² = M₂/(n-1)
-   *
-   * @returns Normalization statistics
+   * @returns NormalizationStats with running mean and std for inputs/outputs
+   * @example
+   * ```typescript
+   * const stats = model.getNormalizationStats();
+   * console.log(`Input mean: [${stats.inputMean.join(', ')}]`);
+   * ```
    */
-  public getNormalizationStats(): NormalizationStats {
-    if (!this._isInitialized) {
-      return {
-        inputMean: [],
-        inputStd: [],
-        outputMean: [],
-        outputStd: [],
-        count: 0,
-      };
+  getNormalizationStats(): NormalizationStats {
+    const inputMean: number[] = [];
+    const inputStd: number[] = [];
+    const outputMean: number[] = [];
+    const outputStd: number[] = [];
+    let count = 0;
+
+    if (this._inputWelford && this._outputWelford) {
+      count = this._inputWelford.count;
+      const n = count;
+
+      for (let i = 0; i < this._inputDim; i++) {
+        inputMean.push(this._inputWelford.mean[i]);
+        const variance = n > 1 ? this._inputWelford.m2[i] / (n - 1) : 0;
+        inputStd.push(Math.sqrt(variance));
+      }
+
+      for (let i = 0; i < this._outputDim; i++) {
+        outputMean.push(this._outputWelford.mean[i]);
+        const variance = n > 1 ? this._outputWelford.m2[i] / (n - 1) : 0;
+        outputStd.push(Math.sqrt(variance));
+      }
     }
 
-    const inputStd = new Array<number>(this._inputDim);
-    const outputStd = new Array<number>(this._outputDim);
-    const n = this._sampleCount;
-
-    for (let i = 0; i < this._inputDim; i++) {
-      const variance = n > 1 ? this._inputM2[i] / (n - 1) : 1;
-      inputStd[i] = Math.sqrt(variance + this._epsilon);
-    }
-
-    for (let i = 0; i < this._outputDim; i++) {
-      const variance = n > 1 ? this._outputM2[i] / (n - 1) : 1;
-      outputStd[i] = Math.sqrt(variance + this._epsilon);
-    }
-
-    return {
-      inputMean: Array.from(this._inputMean),
-      inputStd,
-      outputMean: Array.from(this._outputMean),
-      outputStd,
-      count: n,
-    };
+    return { inputMean, inputStd, outputMean, outputStd, count };
   }
 
   /**
-   * Resets model to initial state, clearing all learned weights and statistics
+   * Reset model to initial state
+   * Clears all learned parameters and statistics
+   *
+   * @example
+   * ```typescript
+   * model.reset();
+   * // Model is now in initial state, ready for new training
+   * ```
    */
-  public reset(): void {
+  reset(): void {
+    this._isInitialized = false;
     this._inputDim = 0;
     this._outputDim = 0;
-    this._flattenSize = 0;
-    this._isInitialized = false;
-
-    this._convKernels = [];
-    this._convBiases = [];
-    this._denseWeights = new Float64Array(0);
-    this._denseBiases = new Float64Array(0);
-
-    this._convKernelM = [];
-    this._convKernelV = [];
-    this._convBiasM = [];
-    this._convBiasV = [];
-    this._denseWeightM = new Float64Array(0);
-    this._denseWeightV = new Float64Array(0);
-    this._denseBiasM = new Float64Array(0);
-    this._denseBiasV = new Float64Array(0);
-
-    this._inputMean = new Float64Array(0);
-    this._inputM2 = new Float64Array(0);
-    this._outputMean = new Float64Array(0);
-    this._outputM2 = new Float64Array(0);
-    this._errorMean = new Float64Array(0);
-    this._errorM2 = new Float64Array(0);
-
+    this._spatialDim = 0;
+    this._flattenedDim = 0;
+    this._convLayers = [];
+    this._denseLayer = null;
+    this._inputWelford = null;
+    this._outputWelford = null;
     this._sampleCount = 0;
     this._updateCount = 0;
-    this._runningLoss = 0;
-    this._lossCount = 0;
+    this._totalLoss = 0;
     this._converged = false;
     this._driftCount = 0;
-    this._effectiveLr = 0;
-    this._adwinSize = 0;
-
+    this._adwinBuckets = [];
+    this._adwinTotal = 0;
+    this._adwinCount = 0;
+    this._adwinWidth = 0;
     this._activations = [];
     this._preActivations = [];
     this._gradients = [];
-    this._gradKernelTemp = [];
-    this._gradBiasTemp = [];
-    this._gradDenseW = new Float64Array(0);
-    this._gradDenseB = new Float64Array(0);
-    this._normalizedInput = new Float64Array(0);
-    this._normalizedTarget = new Float64Array(0);
-    this._prediction = new Float64Array(0);
-    this._lastInput = new Float64Array(0);
-    this._denseOutputGrad = new Float64Array(0);
-    this._inChannels = new Int32Array(0);
-  }
-
-  // ========================================================================
-  // Private Methods
-  // ========================================================================
-
-  /**
-   * Initializes all network weights and preallocates buffers.
-   * Uses He initialization: W ~ N(0, √(2/fan_in)) for ReLU networks.
-   */
-  private _initializeNetwork(): void {
-    const kSize = this._kernelSize;
-    const numConvs = this._convolutionsPerLayer;
-    const spatial = this._inputDim;
-
-    this._flattenSize = numConvs * spatial;
-    this._inChannels = new Int32Array(this._hiddenLayers);
-
-    // Initialize conv layers
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      const inCh = layer === 0 ? 1 : numConvs;
-      this._inChannels[layer] = inCh;
-      const outCh = numConvs;
-      const kernelLen = outCh * inCh * kSize;
-      const fanIn = inCh * kSize;
-
-      // He initialization
-      this._convKernels.push(this._heInit(kernelLen, fanIn));
-      this._convBiases.push(new Float64Array(outCh));
-
-      // Adam state (zeros)
-      this._convKernelM.push(new Float64Array(kernelLen));
-      this._convKernelV.push(new Float64Array(kernelLen));
-      this._convBiasM.push(new Float64Array(outCh));
-      this._convBiasV.push(new Float64Array(outCh));
-
-      // Gradient temps
-      this._gradKernelTemp.push(new Float64Array(kernelLen));
-      this._gradBiasTemp.push(new Float64Array(outCh));
-    }
-
-    // Dense layer
-    const denseLen = this._flattenSize * this._outputDim;
-    this._denseWeights = this._heInit(denseLen, this._flattenSize);
-    this._denseBiases = new Float64Array(this._outputDim);
-    this._denseWeightM = new Float64Array(denseLen);
-    this._denseWeightV = new Float64Array(denseLen);
-    this._denseBiasM = new Float64Array(this._outputDim);
-    this._denseBiasV = new Float64Array(this._outputDim);
-    this._gradDenseW = new Float64Array(denseLen);
-    this._gradDenseB = new Float64Array(this._outputDim);
-
-    // Activations: layer 0 = input (1 × spatial), layers 1-L = conv (numConvs × spatial)
-    this._activations.push(new Float64Array(spatial));
-    this._preActivations.push(new Float64Array(spatial));
-
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      const size = numConvs * spatial;
-      this._activations.push(new Float64Array(size));
-      this._preActivations.push(new Float64Array(size));
-    }
-
-    // Gradient buffers
-    this._gradients.push(new Float64Array(spatial));
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      this._gradients.push(new Float64Array(numConvs * spatial));
-    }
-
-    // Normalization stats
-    this._inputMean = new Float64Array(this._inputDim);
-    this._inputM2 = new Float64Array(this._inputDim);
-    this._outputMean = new Float64Array(this._outputDim);
-    this._outputM2 = new Float64Array(this._outputDim);
-    this._errorMean = new Float64Array(this._outputDim);
-    this._errorM2 = new Float64Array(this._outputDim);
-
-    // Computation buffers
-    this._normalizedInput = new Float64Array(this._inputDim);
-    this._normalizedTarget = new Float64Array(this._outputDim);
-    this._prediction = new Float64Array(this._outputDim);
-    this._lastInput = new Float64Array(this._inputDim);
-    this._denseOutputGrad = new Float64Array(this._outputDim);
-
-    this._isInitialized = true;
+    this._inputBuffer = null;
+    this._outputBuffer = null;
+    this._targetBuffer = null;
+    this._lastInput = null;
+    this._cachedBeta1Power = 1;
+    this._cachedBeta2Power = 1;
+    this._bufferPool.clear();
   }
 
   /**
-   * He initialization for ReLU networks.
-   * W ~ N(0, √(2/fan_in)) using Box-Muller transform.
-   */
-  private _heInit(size: number, fanIn: number): Float64Array {
-    const arr = new Float64Array(size);
-    const stddev = Math.sqrt(2.0 / fanIn);
-
-    // Box-Muller generates pairs
-    for (let i = 0; i < size; i += 2) {
-      const u1 = Math.random() || 1e-10;
-      const u2 = Math.random();
-      const mag = stddev * Math.sqrt(-2.0 * Math.log(u1));
-      const theta = 6.283185307179586 * u2; // 2π
-
-      arr[i] = mag * Math.cos(theta);
-      if (i + 1 < size) {
-        arr[i + 1] = mag * Math.sin(theta);
-      }
-    }
-
-    return arr;
-  }
-
-  /**
-   * Trains on a single sample with online learning.
-   */
-  private _trainSample(x: number[], y: number[], idx: number): FitResult {
-    this._sampleCount++;
-    const n = this._sampleCount;
-
-    // Copy to typed arrays and save last input
-    for (let i = 0; i < this._inputDim; i++) {
-      this._lastInput[i] = x[i];
-    }
-
-    // Update Welford stats BEFORE normalizing (incremental mean/variance)
-    // δ = x - μ, μ += δ/n, M₂ += δ(x - μ)
-    this._updateWelford(this._lastInput, this._inputMean, this._inputM2, n);
-    this._updateWelfordFromArray(y, this._outputMean, this._outputM2, n);
-
-    // Z-score normalize: x̃ = (x - μ)/(σ + ε)
-    this._normalizeInPlace(
-      this._lastInput,
-      this._inputMean,
-      this._inputM2,
-      this._normalizedInput,
-    );
-    this._normalizeFromArray(
-      y,
-      this._outputMean,
-      this._outputM2,
-      this._normalizedTarget,
-    );
-
-    // Forward pass
-    this._forward(this._normalizedInput);
-
-    // Compute MSE loss: L = (1/2d)Σ(ŷ - y)²
-    let mse = 0;
-    for (let i = 0; i < this._outputDim; i++) {
-      const diff = this._prediction[i] - this._normalizedTarget[i];
-      mse += diff * diff;
-    }
-    mse /= this._outputDim;
-
-    // L2 regularization: L_reg = (λ/2)Σw²
-    const regLoss = this._computeRegLoss();
-    const totalLoss = mse + regLoss;
-
-    // Outlier detection: r = error/σ_error, outlier if |r| > threshold
-    const isOutlier = this._checkOutlier();
-    const sampleWeight = isOutlier ? 0.1 : 1.0;
-
-    // Backward pass
-    const gradNorm = this._backward(sampleWeight);
-
-    // Adam update with warmup + cosine decay
-    this._effectiveLr = this._adamUpdate();
-
-    // Update error statistics for uncertainty estimation
-    this._updateErrorStats();
-
-    // Running loss for accuracy tracking: L̄ = ΣLoss/n
-    this._runningLoss += totalLoss;
-    this._lossCount++;
-
-    // Convergence check
-    const avgLoss = this._runningLoss / this._lossCount;
-    this._converged = avgLoss < this._convergenceThreshold;
-
-    // ADWIN drift detection
-    const driftDetected = this._adwinCheck(totalLoss);
-    if (driftDetected) {
-      this._driftCount++;
-    }
-
-    return {
-      loss: totalLoss,
-      gradientNorm: gradNorm,
-      effectiveLearningRate: this._effectiveLr,
-      isOutlier,
-      converged: this._converged,
-      sampleIndex: idx,
-      driftDetected,
-    };
-  }
-
-  /**
-   * Full forward pass through network.
-   * Conv1D: y[c,i] = Σₖ Σⱼ(W[c,k,j] · x[k,i+j-pad]) + b[c]
-   * ReLU: max(0, x)
-   */
-  private _forward(input: Float64Array): void {
-    const spatial = this._inputDim;
-    const numConvs = this._convolutionsPerLayer;
-    const kSize = this._kernelSize;
-    const pad = this._pad;
-
-    // Copy input to first activation layer
-    const act0 = this._activations[0];
-    for (let i = 0; i < spatial; i++) {
-      act0[i] = input[i];
-    }
-
-    // Forward through conv layers
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      const inCh = this._inChannels[layer];
-      const inputAct = this._activations[layer];
-      const outputAct = this._activations[layer + 1];
-      const preAct = this._preActivations[layer + 1];
-      const kernel = this._convKernels[layer];
-      const bias = this._convBiases[layer];
-
-      let outIdx = 0;
-      for (let oc = 0; oc < numConvs; oc++) {
-        const biasVal = bias[oc];
-        const kernelBase = oc * inCh * kSize;
-
-        for (let i = 0; i < spatial; i++) {
-          let sum = biasVal;
-
-          // Convolution with same padding
-          for (let ic = 0; ic < inCh; ic++) {
-            const inputBase = ic * spatial;
-            const kBase = kernelBase + ic * kSize;
-
-            for (let j = 0; j < kSize; j++) {
-              const inputIdx = i + j - pad;
-              // Zero padding: skip out-of-bounds
-              if (inputIdx >= 0 && inputIdx < spatial) {
-                sum += kernel[kBase + j] * inputAct[inputBase + inputIdx];
-              }
-            }
-          }
-
-          preAct[outIdx] = sum;
-          // ReLU activation
-          outputAct[outIdx] = sum > 0 ? sum : 0;
-          outIdx++;
-        }
-      }
-    }
-
-    // Dense layer: y = Wx + b
-    const lastAct = this._activations[this._hiddenLayers];
-    const flattenSize = this._flattenSize;
-
-    for (let o = 0; o < this._outputDim; o++) {
-      let sum = this._denseBiases[o];
-      const weightBase = o * flattenSize;
-
-      for (let i = 0; i < flattenSize; i++) {
-        sum += this._denseWeights[weightBase + i] * lastAct[i];
-      }
-
-      this._prediction[o] = sum;
-    }
-  }
-
-  /**
-   * Full backward pass computing gradients.
-   * ∂L/∂W via chain rule, ∂Conv: convolve with upstream gradient.
-   */
-  private _backward(sampleWeight: number): number {
-    const spatial = this._inputDim;
-    const numConvs = this._convolutionsPerLayer;
-    const flattenSize = this._flattenSize;
-    const kSize = this._kernelSize;
-    const pad = this._pad;
-
-    let gradNormSq = 0;
-
-    // Output gradient: ∂L/∂ŷ = (ŷ - y) × sampleWeight
-    for (let o = 0; o < this._outputDim; o++) {
-      const diff = (this._prediction[o] - this._normalizedTarget[o]) *
-        sampleWeight;
-      this._denseOutputGrad[o] = diff;
-      gradNormSq += diff * diff;
-    }
-
-    // Dense layer backward
-    // ∂L/∂W = (ŷ - y) ⊗ activation
-    // ∂L/∂activation = Wᵀ · (ŷ - y)
-    const lastAct = this._activations[this._hiddenLayers];
-    const flatGrad = this._gradients[this._hiddenLayers];
-
-    // Zero flatten gradient
-    for (let i = 0; i < flattenSize; i++) {
-      flatGrad[i] = 0;
-    }
-
-    for (let o = 0; o < this._outputDim; o++) {
-      const diff = this._denseOutputGrad[o];
-      this._gradDenseB[o] = diff;
-
-      const weightBase = o * flattenSize;
-      for (let i = 0; i < flattenSize; i++) {
-        this._gradDenseW[weightBase + i] = diff * lastAct[i];
-        flatGrad[i] += diff * this._denseWeights[weightBase + i];
-      }
-    }
-
-    // Backward through conv layers (reverse order)
-    for (let layer = this._hiddenLayers - 1; layer >= 0; layer--) {
-      const inCh = this._inChannels[layer];
-      const inputAct = this._activations[layer];
-      const preAct = this._preActivations[layer + 1];
-      const upstream = this._gradients[layer + 1];
-      const kernel = this._convKernels[layer];
-      const gradKernel = this._gradKernelTemp[layer];
-      const gradBias = this._gradBiasTemp[layer];
-      const gradInput = this._gradients[layer];
-
-      const kernelLen = gradKernel.length;
-      const biasLen = gradBias.length;
-      const inputLen = gradInput.length;
-
-      // Zero gradients
-      for (let i = 0; i < kernelLen; i++) gradKernel[i] = 0;
-      for (let i = 0; i < biasLen; i++) gradBias[i] = 0;
-      for (let i = 0; i < inputLen; i++) gradInput[i] = 0;
-
-      let upstreamIdx = 0;
-      for (let oc = 0; oc < numConvs; oc++) {
-        const kernelBase = oc * inCh * kSize;
-
-        for (let i = 0; i < spatial; i++) {
-          // ReLU derivative: 1 if preAct > 0, else 0
-          const reluGrad = preAct[upstreamIdx] > 0 ? upstream[upstreamIdx] : 0;
-          upstreamIdx++;
-
-          if (reluGrad === 0) continue;
-
-          gradBias[oc] += reluGrad;
-
-          for (let ic = 0; ic < inCh; ic++) {
-            const inputBase = ic * spatial;
-            const kBase = kernelBase + ic * kSize;
-
-            for (let j = 0; j < kSize; j++) {
-              const inputIdx = i + j - pad;
-              if (inputIdx >= 0 && inputIdx < spatial) {
-                // ∂L/∂W += upstream × input
-                gradKernel[kBase + j] += reluGrad *
-                  inputAct[inputBase + inputIdx];
-                // ∂L/∂input += upstream × W (for next layer)
-                gradInput[inputBase + inputIdx] += reluGrad * kernel[kBase + j];
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return Math.sqrt(gradNormSq);
-  }
-
-  /**
-   * Adam optimizer update with warmup + cosine decay.
+   * Serialize model state to JSON string
+   * Includes all weights, optimizer states, and normalization statistics
    *
-   * Learning rate schedule:
-   * - Warmup: lr = base_lr × (t / warmup_steps)
-   * - Decay: lr = base_lr × 0.5 × (1 + cos(π × progress))
-   *
-   * Adam: m = β₁m + (1-β₁)g, v = β₂v + (1-β₂)g²
-   *       W -= lr × (m/(1-β₁ᵗ)) / (√(v/(1-β₂ᵗ)) + ε)
+   * @returns JSON string containing complete model state
+   * @example
+   * ```typescript
+   * const modelJson = model.save();
+   * localStorage.setItem('cnn-model', modelJson);
+   * ```
    */
-  private _adamUpdate(): number {
-    this._updateCount++;
-    const t = this._updateCount;
-
-    // Learning rate with warmup and cosine decay
-    let lr: number;
-    if (t <= this._warmupSteps) {
-      lr = this._learningRate * (t / Math.max(1, this._warmupSteps));
-    } else {
-      const progress = (t - this._warmupSteps) /
-        Math.max(1, this._totalSteps - this._warmupSteps);
-      lr = this._learningRate * 0.5 *
-        (1 + Math.cos(3.141592653589793 * Math.min(progress, 1)));
-    }
-
-    // Bias correction: 1 - β^t
-    const beta1Corr = 1 - Math.pow(this._beta1, t);
-    const beta2Corr = 1 - Math.pow(this._beta2, t);
-
-    // Update conv layers
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      this._adamUpdateArr(
-        this._convKernels[layer],
-        this._gradKernelTemp[layer],
-        this._convKernelM[layer],
-        this._convKernelV[layer],
-        lr,
-        beta1Corr,
-        beta2Corr,
-      );
-      this._adamUpdateArr(
-        this._convBiases[layer],
-        this._gradBiasTemp[layer],
-        this._convBiasM[layer],
-        this._convBiasV[layer],
-        lr,
-        beta1Corr,
-        beta2Corr,
-      );
-    }
-
-    // Update dense layer
-    this._adamUpdateArr(
-      this._denseWeights,
-      this._gradDenseW,
-      this._denseWeightM,
-      this._denseWeightV,
-      lr,
-      beta1Corr,
-      beta2Corr,
-    );
-    this._adamUpdateArr(
-      this._denseBiases,
-      this._gradDenseB,
-      this._denseBiasM,
-      this._denseBiasV,
-      lr,
-      beta1Corr,
-      beta2Corr,
-    );
-
-    return lr;
-  }
-
-  /**
-   * In-place Adam update for single weight array with L2 regularization.
-   */
-  private _adamUpdateArr(
-    weights: Float64Array,
-    grads: Float64Array,
-    m: Float64Array,
-    v: Float64Array,
-    lr: number,
-    beta1Corr: number,
-    beta2Corr: number,
-  ): void {
-    const len = weights.length;
-    const beta1 = this._beta1;
-    const beta2 = this._beta2;
-    const eps = this._epsilon;
-    const lambda = this._regularizationStrength;
-
-    for (let i = 0; i < len; i++) {
-      // Add L2 regularization gradient: ∂(λ/2 w²)/∂w = λw
-      const g = grads[i] + lambda * weights[i];
-
-      // First moment: m = β₁m + (1-β₁)g
-      m[i] = beta1 * m[i] + (1 - beta1) * g;
-
-      // Second moment: v = β₂v + (1-β₂)g²
-      v[i] = beta2 * v[i] + (1 - beta2) * g * g;
-
-      // Bias-corrected estimates
-      const mHat = m[i] / beta1Corr;
-      const vHat = v[i] / beta2Corr;
-
-      // Update: W -= lr × m̂ / (√v̂ + ε)
-      weights[i] -= lr * mHat / (Math.sqrt(vHat) + eps);
-    }
-  }
-
-  /**
-   * Welford's algorithm: δ = x - μ, μ += δ/n, M₂ += δ(x - μ)
-   */
-  private _updateWelford(
-    x: Float64Array,
-    mean: Float64Array,
-    m2: Float64Array,
-    n: number,
-  ): void {
-    const len = x.length;
-    for (let i = 0; i < len; i++) {
-      const delta = x[i] - mean[i];
-      mean[i] += delta / n;
-      const delta2 = x[i] - mean[i];
-      m2[i] += delta * delta2;
-    }
-  }
-
-  /**
-   * Welford's algorithm from regular array input
-   */
-  private _updateWelfordFromArray(
-    x: number[],
-    mean: Float64Array,
-    m2: Float64Array,
-    n: number,
-  ): void {
-    const len = x.length;
-    for (let i = 0; i < len; i++) {
-      const delta = x[i] - mean[i];
-      mean[i] += delta / n;
-      const delta2 = x[i] - mean[i];
-      m2[i] += delta * delta2;
-    }
-  }
-
-  /**
-   * Z-score normalization: x̃ = (x - μ)/(σ + ε), σ² = M₂/(n-1)
-   */
-  private _normalizeInPlace(
-    x: Float64Array,
-    mean: Float64Array,
-    m2: Float64Array,
-    output: Float64Array,
-  ): void {
-    const n = this._sampleCount;
-    const eps = this._epsilon;
-    const len = x.length;
-
-    for (let i = 0; i < len; i++) {
-      const variance = n > 1 ? m2[i] / (n - 1) : 1;
-      const std = Math.sqrt(variance + eps);
-      output[i] = (x[i] - mean[i]) / std;
-    }
-  }
-
-  /**
-   * Z-score normalization from regular array
-   */
-  private _normalizeFromArray(
-    x: number[],
-    mean: Float64Array,
-    m2: Float64Array,
-    output: Float64Array,
-  ): void {
-    const n = this._sampleCount;
-    const eps = this._epsilon;
-    const len = x.length;
-
-    for (let i = 0; i < len; i++) {
-      const variance = n > 1 ? m2[i] / (n - 1) : 1;
-      const std = Math.sqrt(variance + eps);
-      output[i] = (x[i] - mean[i]) / std;
-    }
-  }
-
-  /**
-   * Computes L2 regularization loss: L_reg = (λ/2)Σw²
-   */
-  private _computeRegLoss(): number {
-    let regLoss = 0;
-
-    for (let layer = 0; layer < this._hiddenLayers; layer++) {
-      const kernel = this._convKernels[layer];
-      const len = kernel.length;
-      for (let i = 0; i < len; i++) {
-        regLoss += kernel[i] * kernel[i];
-      }
-    }
-
-    const denseLen = this._denseWeights.length;
-    for (let i = 0; i < denseLen; i++) {
-      regLoss += this._denseWeights[i] * this._denseWeights[i];
-    }
-
-    return 0.5 * this._regularizationStrength * regLoss;
-  }
-
-  /**
-   * Outlier check: r = error/σ_error, outlier if |r| > threshold
-   */
-  private _checkOutlier(): boolean {
-    if (this._sampleCount < 10) return false;
-
-    const n = this._sampleCount;
-    const eps = this._epsilon;
-
-    for (let i = 0; i < this._outputDim; i++) {
-      const variance = n > 1 ? this._errorM2[i] / (n - 1) : 1;
-      const errorStd = Math.sqrt(variance + eps);
-      const error = Math.abs(this._prediction[i] - this._normalizedTarget[i]);
-      const zScore = errorStd > eps ? error / errorStd : 0;
-
-      if (zScore > this._outlierThreshold) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Update prediction error statistics
-   */
-  private _updateErrorStats(): void {
-    const n = this._sampleCount;
-
-    for (let i = 0; i < this._outputDim; i++) {
-      const error = this._prediction[i] - this._normalizedTarget[i];
-      const delta = error - this._errorMean[i];
-      this._errorMean[i] += delta / n;
-      const delta2 = error - this._errorMean[i];
-      this._errorM2[i] += delta * delta2;
-    }
-  }
-
-  /**
-   * Compute standard error for predictions: SE = σ/√n
-   */
-  private _computeStandardError(): Float64Array {
-    const se = new Float64Array(this._outputDim);
-    const n = this._sampleCount;
-    const eps = this._epsilon;
-
-    if (n <= 1) {
-      for (let i = 0; i < this._outputDim; i++) {
-        se[i] = 1;
-      }
-      return se;
-    }
-
-    for (let i = 0; i < this._outputDim; i++) {
-      const variance = this._errorM2[i] / (n - 1);
-      // Denormalize: multiply by output std
-      const outputVar = this._outputM2[i] / (n - 1);
-      const outputStd = Math.sqrt(outputVar + eps);
-      se[i] = outputStd * Math.sqrt((variance + eps) / n);
-    }
-
-    return se;
-  }
-
-  /**
-   * ADWIN drift detection.
-   * Detect drift when |μ₀ - μ₁| ≥ εcut where εcut = √((1/2m)ln(4|W|/δ))
-   */
-  private _adwinCheck(error: number): boolean {
-    // Add to window
-    if (this._adwinSize < this._adwinMaxSize) {
-      this._adwinWindow[this._adwinSize] = error;
-      this._adwinSize++;
-    } else {
-      // Shift window
-      for (let i = 0; i < this._adwinMaxSize - 1; i++) {
-        this._adwinWindow[i] = this._adwinWindow[i + 1];
-      }
-      this._adwinWindow[this._adwinMaxSize - 1] = error;
-    }
-
-    if (this._adwinSize < 10) return false;
-
-    // Compute total sum
-    let totalSum = 0;
-    for (let i = 0; i < this._adwinSize; i++) {
-      totalSum += this._adwinWindow[i];
-    }
-
-    // Try all cuts to find significant difference
-    let leftSum = 0;
-    const delta = this._adwinDelta;
-
-    for (let cut = 1; cut < this._adwinSize; cut++) {
-      leftSum += this._adwinWindow[cut - 1];
-      const rightSum = totalSum - leftSum;
-
-      const n0 = cut;
-      const n1 = this._adwinSize - cut;
-      const mu0 = leftSum / n0;
-      const mu1 = rightSum / n1;
-
-      // Harmonic mean-based m
-      const m = 1 / (1 / n0 + 1 / n1);
-      const epsCut = Math.sqrt(
-        (0.5 / m) * Math.log(4 * this._adwinSize / delta),
-      );
-
-      if (Math.abs(mu0 - mu1) >= epsCut) {
-        // Drift detected - shrink window
-        const newSize = this._adwinSize - cut;
-        for (let i = 0; i < newSize; i++) {
-          this._adwinWindow[i] = this._adwinWindow[cut + i];
-        }
-        this._adwinSize = newSize;
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Creates empty FitResult for error/edge cases
-   */
-  private _emptyFitResult(): FitResult {
-    return {
-      loss: 0,
-      gradientNorm: 0,
-      effectiveLearningRate: 0,
-      isOutlier: false,
-      converged: false,
-      sampleIndex: -1,
-      driftDetected: false,
+  save(): string {
+    const state: SerializedState = {
+      config: {
+        hiddenLayers: this._hiddenLayers,
+        convolutionsPerLayer: this._convolutionsPerLayer,
+        kernelSize: this._kernelSize,
+        learningRate: this._learningRate,
+        warmupSteps: this._warmupSteps,
+        totalSteps: this._totalSteps,
+        beta1: this._beta1,
+        beta2: this._beta2,
+        epsilon: this._epsilon,
+        regularizationStrength: this._regularizationStrength,
+        convergenceThreshold: this._convergenceThreshold,
+        outlierThreshold: this._outlierThreshold,
+        adwinDelta: this._adwinDelta,
+      },
+      model: {
+        isInitialized: this._isInitialized,
+        inputDim: this._inputDim,
+        outputDim: this._outputDim,
+        sampleCount: this._sampleCount,
+        updateCount: this._updateCount,
+        totalLoss: this._totalLoss,
+        converged: this._converged,
+        driftCount: this._driftCount,
+      },
+      weights: null,
+      normalization: null,
+      adwin: null,
     };
+
+    if (this._isInitialized) {
+      // Serialize weights
+      state.weights = {
+        convLayers: this._convLayers.map((layer) => ({
+          kernels: Array.from(layer.kernels),
+          biases: Array.from(layer.biases),
+          adamM: Array.from(layer.adamM),
+          adamV: Array.from(layer.adamV),
+          adamBiasM: Array.from(layer.adamBiasM),
+          adamBiasV: Array.from(layer.adamBiasV),
+          inputChannels: layer.inputChannels,
+          outputChannels: layer.outputChannels,
+        })),
+        denseLayer: this._denseLayer
+          ? {
+            weights: Array.from(this._denseLayer.weights),
+            biases: Array.from(this._denseLayer.biases),
+            adamM: Array.from(this._denseLayer.adamM),
+            adamV: Array.from(this._denseLayer.adamV),
+            adamBiasM: Array.from(this._denseLayer.adamBiasM),
+            adamBiasV: Array.from(this._denseLayer.adamBiasV),
+            inputDim: this._denseLayer.inputDim,
+            outputDim: this._denseLayer.outputDim,
+          }
+          : null,
+      };
+
+      // Serialize normalization
+      state.normalization = {
+        inputMean: Array.from(this._inputWelford!.mean),
+        inputM2: Array.from(this._inputWelford!.m2),
+        outputMean: Array.from(this._outputWelford!.mean),
+        outputM2: Array.from(this._outputWelford!.m2),
+        count: this._inputWelford!.count,
+      };
+
+      // Serialize ADWIN
+      state.adwin = {
+        buckets: this._adwinBuckets.map((level) =>
+          level.map((b) => ({ ...b }))
+        ),
+        total: this._adwinTotal,
+        count: this._adwinCount,
+        width: this._adwinWidth,
+      };
+    }
+
+    return JSON.stringify(state);
+  }
+
+  /**
+   * Load model state from JSON string
+   *
+   * @param jsonString - JSON string from save()
+   * @example
+   * ```typescript
+   * const modelJson = localStorage.getItem('cnn-model');
+   * if (modelJson) {
+   *   model.load(modelJson);
+   * }
+   * ```
+   */
+  load(jsonString: string): void {
+    const state: SerializedState = JSON.parse(jsonString);
+
+    this.reset();
+
+    // Restore model metadata
+    this._isInitialized = state.model.isInitialized;
+    this._inputDim = state.model.inputDim;
+    this._outputDim = state.model.outputDim;
+    this._sampleCount = state.model.sampleCount;
+    this._updateCount = state.model.updateCount;
+    this._totalLoss = state.model.totalLoss;
+    this._converged = state.model.converged;
+    this._driftCount = state.model.driftCount;
+
+    // Recompute cached beta powers
+    this._cachedBeta1Power = Math.pow(this._beta1, this._updateCount);
+    this._cachedBeta2Power = Math.pow(this._beta2, this._updateCount);
+
+    if (this._isInitialized && state.weights) {
+      this._spatialDim = this._inputDim;
+
+      // Restore conv layers
+      this._convLayers = state.weights.convLayers.map((layer) => ({
+        kernels: new Float64Array(layer.kernels),
+        biases: new Float64Array(layer.biases),
+        kernelGrad: new Float64Array(layer.kernels.length),
+        biasGrad: new Float64Array(layer.biases.length),
+        adamM: new Float64Array(layer.adamM),
+        adamV: new Float64Array(layer.adamV),
+        adamBiasM: new Float64Array(layer.adamBiasM),
+        adamBiasV: new Float64Array(layer.adamBiasV),
+        inputChannels: layer.inputChannels,
+        outputChannels: layer.outputChannels,
+      }));
+
+      // Restore dense layer
+      if (state.weights.denseLayer) {
+        const dl = state.weights.denseLayer;
+        this._flattenedDim = dl.inputDim;
+        this._denseLayer = {
+          weights: new Float64Array(dl.weights),
+          biases: new Float64Array(dl.biases),
+          weightGrad: new Float64Array(dl.weights.length),
+          biasGrad: new Float64Array(dl.biases.length),
+          adamM: new Float64Array(dl.adamM),
+          adamV: new Float64Array(dl.adamV),
+          adamBiasM: new Float64Array(dl.adamBiasM),
+          adamBiasV: new Float64Array(dl.adamBiasV),
+          inputDim: dl.inputDim,
+          outputDim: dl.outputDim,
+        };
+      }
+
+      // Restore normalization
+      if (state.normalization) {
+        this._inputWelford = {
+          mean: new Float64Array(state.normalization.inputMean),
+          m2: new Float64Array(state.normalization.inputM2),
+          count: state.normalization.count,
+        };
+        this._outputWelford = {
+          mean: new Float64Array(state.normalization.outputMean),
+          m2: new Float64Array(state.normalization.outputM2),
+          count: state.normalization.count,
+        };
+      }
+
+      // Restore ADWIN
+      if (state.adwin) {
+        this._adwinBuckets = state.adwin.buckets.map((level) =>
+          level.map((b) => ({ ...b }))
+        );
+        this._adwinTotal = state.adwin.total;
+        this._adwinCount = state.adwin.count;
+        this._adwinWidth = state.adwin.width;
+      }
+
+      // Reallocate buffers
+      this._activations = [];
+      this._preActivations = [];
+      this._gradients = [];
+
+      this._activations.push(new Float64Array(this._spatialDim));
+      this._preActivations.push(new Float64Array(this._spatialDim));
+
+      for (let l = 0; l < this._hiddenLayers; l++) {
+        const size = this._convolutionsPerLayer * this._spatialDim;
+        this._activations.push(new Float64Array(size));
+        this._preActivations.push(new Float64Array(size));
+        this._gradients.push(new Float64Array(size));
+      }
+
+      this._activations.push(new Float64Array(this._outputDim));
+      this._gradients.push(new Float64Array(this._flattenedDim));
+      this._gradients.push(new Float64Array(this._outputDim));
+
+      this._inputBuffer = new Float64Array(this._inputDim);
+      this._outputBuffer = new Float64Array(this._outputDim);
+      this._targetBuffer = new Float64Array(this._outputDim);
+      this._lastInput = new Float64Array(this._inputDim);
+    }
   }
 }
 
-export { ConvolutionalRegression as default };
+export default ConvolutionalRegression;

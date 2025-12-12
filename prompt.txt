@@ -26,6 +26,8 @@ API:
 fitOnline({ xCoordinates: number[][], yCoordinates: number[][] }): FitResult → Incremental Adam, Welford's z-score, L2 reg, outlier downweighting, ADWIN drift detection
 predict(futureSteps: number): PredictionResult → Predictions
 getModelSummary(): ModelSummary | getWeights(): WeightInfo | getNormalizationStats(): NormalizationStats | reset(): void
+save(): string //JSON.stringify in all state data
+load(w: string) //JSON string of all state data
 
 TYPES:
 FitResult { loss, gradientNorm, effectiveLearningRate, isOutlier, converged, sampleIndex, driftDetected }
