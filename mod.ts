@@ -10,6 +10,7 @@
  *
  * @module ConvolutionalRegression
  * @version 1.0.0
+ * @author Henrique Emanoel Viana
  */
 
 // ============================================================================

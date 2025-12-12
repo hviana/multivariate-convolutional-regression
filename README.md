@@ -2,17 +2,12 @@ Model: # 🧠 ConvolutionalRegression
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg?logo=typescript&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
-
 **High-Performance Convolutional Neural Network for Multivariate Regression with
 Incremental Online Learning**
 
-[Features](#-features) • [Installation](#-installation) •
-[Quick Start](#-quick-start) • [Architecture](#-architecture) •
-[API Reference](#-api-reference) • [Parameters](#-configuration-parameters)
+[Features](#-features) • [Quick Start](#-quick-start) •
+[Architecture](#-architecture) • [API Reference](#-api-reference) •
+[Parameters](#-configuration-parameters)
 
 </div>
 
@@ -21,7 +16,6 @@ Incremental Online Learning**
 ## 📋 Table of Contents
 
 - [✨ Features](#-features)
-- [📦 Installation](#-installation)
 - [🚀 Quick Start](#-quick-start)
 - [🏗️ Architecture](#️-architecture)
 - [📖 API Reference](#-api-reference)
@@ -86,33 +80,12 @@ Incremental Online Learning**
 
 ---
 
-## 📦 Installation
-
-```bash
-# npm
-npm install convolutional-regression
-
-# yarn
-yarn add convolutional-regression
-
-# pnpm
-pnpm add convolutional-regression
-```
-
-**Or copy the source file directly into your project:**
-
-```typescript
-import { ConvolutionalRegression } from "./ConvolutionalRegression";
-```
-
----
-
 ## 🚀 Quick Start
 
 ### Basic Usage
 
 ```typescript
-import { ConvolutionalRegression } from "convolutional-regression";
+import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
 
 // 1️⃣ Create model with default configuration
 const model = new ConvolutionalRegression();
