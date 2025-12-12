@@ -1,3 +1,45 @@
+> ## ⚠️🚨 IMPORTANT: THIS LIBRARY HAS BEEN DEPRECATED 🚨⚠️
+> 
+> ---
+> 
+> ### 🔄 This library has been replaced by a newer, more powerful version!
+> 
+> <table>
+> <tr>
+> <td>
+> 
+> ### ❌ OLD (This Repository)
+> `@hviana/polynomial-regression`
+> 
+> </td>
+> <td>
+> 
+> ### ✅ NEW (Use This Instead)
+> `@hviana/multivariate-convolutional-regression`
+> 
+> </td>
+> </tr>
+> </table>
+> 
+> ---
+> 
+> ### 📦 Migration Links
+> 
+> | Platform | Link |
+> |----------|------|
+> | 🌐 **JSR Registry** | 👉 [https://jsr.io/@hviana/multivariate-ft-transformer-regression](https://jsr.io/@hviana/multivariate-ft-transformer-regression) |
+> | 🐙 **GitHub Repository** | 👉 [https://github.com/hviana/multivariate-ft-transformer-regression](https://github.com/hviana/multivariate-ft-transformer-regression) |
+> 
+> ---
+> 
+> ### 🛑 Please migrate to the new library for:
+> - ✨ New features and improvements
+> - 🐛 Bug fixes and security updates
+> - 📚 Better documentation
+> - 🔧 Continued maintenance and support
+> 
+> ---
+
 Model: # 🧠 Multivariate Convolutional Regression
 
 <div align="center">
