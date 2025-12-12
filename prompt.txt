@@ -20,17 +20,15 @@ DESIGN:
 - Inline math formula docs; normalize inputs; track running average loss for accuracy
 
 CONFIG (defaults):
-hiddenLayers: 2 (1-10), convolutionsPerLayer: 32 (1-256), kernelSize: 3, learningRate: 0.001, warmupSteps: 100, totalSteps: 10000, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, regularizationStrength: 1e-4, batchSize: 32, convergenceThreshold: 1e-6, outlierThreshold: 3.0, adwinDelta: 0.002
+hiddenLayers: 2 (1-10), convolutionsPerLayer: 32 (1-256), kernelSize: 3, learningRate: 0.001, warmupSteps: 100, totalSteps: 10000, beta1: 0.9, beta2: 0.999, epsilon: 1e-8, regularizationStrength: 1e-4, convergenceThreshold: 1e-6, outlierThreshold: 3.0, adwinDelta: 0.002
 
 API:
 fitOnline({ xCoordinates: number[][], yCoordinates: number[][] }): FitResult → Incremental Adam, Welford's z-score, L2 reg, outlier downweighting, ADWIN drift detection
-fitBatch({ xCoordinates: number[][], yCoordinates: number[][], epochs?: number }): BatchFitResult → Mini-batch GD, shuffling, early stopping
 predict(futureSteps: number): PredictionResult → Predictions
 getModelSummary(): ModelSummary | getWeights(): WeightInfo | getNormalizationStats(): NormalizationStats | reset(): void
 
 TYPES:
 FitResult { loss, gradientNorm, effectiveLearningRate, isOutlier, converged, sampleIndex, driftDetected }
-BatchFitResult { finalLoss, lossHistory: number[], converged, epochsCompleted, totalSamplesProcessed }
 PredictionResult { predictions: SinglePrediction[], accuracy, sampleCount, isModelReady }
 SinglePrediction { predicted, lowerBound, upperBound, standardError: number[] }
 WeightInfo { kernels, biases, firstMoment, secondMoment: number[][][], updateCount }
