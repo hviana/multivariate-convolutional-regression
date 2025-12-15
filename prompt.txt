@@ -1,761 +1,280 @@
-Implement TypeScript library "TCNRegression": a causal dilated 1D CNN (Temporal Convolutional Network) for multivariate regression with incremental online learning, Adam optimizer, and Welford z-score normalization.
+Implement TypeScript library "ESNRegression": an Echo State Network (ESN) / Reservoir Computing model for multivariate regression with incremental online learning using RLS readout training and Welford z-score normalization.
 
 SCOPE AND GOALS
-Build a single self-contained TypeScript library (no heavy runtime deps) that trains online (one sample at a time) and predicts multiple steps ahead.
-Primary use-case is tight CPU and memory environments, so the implementation must be deterministic, allocation-free in hot paths, and numerically stable.
-Model must learn nonlinear cross-variable relationships and automatically learn useful lag patterns within a fixed maximum receptive field (lookback window).
+Build ONE single self-contained TypeScript library (no heavy runtime deps) that trains online (one sample at a time) and predicts multiple steps ahead.
+Primary use-case is tight CPU and memory environments, so the implementation MUST be deterministic, numerically stable, and allocation-free in hot paths.
+The model MUST learn nonlinear cross-variable relationships and implicit lag structure via a fixed recurrent reservoir state with fading memory within a fixed maximum history cap (maxSequenceLength). History is always capped; truncate instead of allocating.
 
-MODEL ARCHITECTURE (TCN)
-Input: multivariate sequence X with shape [seqLen, nFeatures] (batch is fixed to 1).
-Backbone: stack of residual TCN blocks with causal dilated 1D convolutions over time.
-Each TCN block:
+NON-NEGOTIABLE CRITICAL BEHAVIOR (DO NOT VIOLATE)
 
-* Causal dilated Conv1D (kernelSize K, dilation D) mapping channels -> channels (or channels -> hiddenChannels for first block)
-* Bias + activation (ReLU or GELU)
-* Optional second causal dilated Conv1D (same dilation) for a 2-layer block
-* Optional dropout (training only; default off for performance)
-* Residual connection (with 1x1 Conv if channel dims differ)
-* Optional normalization (lightweight LayerNorm/ChannelNorm; default off unless needed)
-  Dilation schedule: powers of two (1,2,4,8,...) repeating or increasing until receptive field covers maxSequenceLength.
-  Head: take the last time-step hidden state (or last few steps pooled) and map to output via linear layer.
-  Multi-step forecasting: direct multi-horizon head (outputDim = nTargets * maxFutureSteps) or recursive roll-forward using predicted outputs appended into the input ring buffer (no allocations).
-* nFeatures is input[0].length
-* nTargets is output[0].length
+1. Latest-X is always internal and authoritative
+
+* fitOnline() MUST push each xCoordinates row into the internal RingBuffer BEFORE any training decision.
+* predict() MUST assemble its input window ONLY from the internal RingBuffer; it MUST NOT require the caller to pass the latest X.
+
+2. Correct timestep (no off-by-one)
+
+* For any predict(futureSteps), the input window MUST end at the most recently ingested X (the last pushed row).
+* Never use “features.length - 2” or any off-by-one logic; the window MUST include the newest X.
+
+3. Prevent “all prices always increasing” bias (common failure)
+
+* Output head MUST NOT drift to monotonic increase due to recursive feeding mistakes, wrong timestep, or history corruption.
+* If useDirectMultiHorizon=true: output [nTargets * maxFutureSteps] from the current reservoir state (and optional current input); DO NOT feed predicted Y back into X.
+* If recursive roll-forward is enabled: ONLY when explicitly configured; use a dedicated rollforward scratch window and NEVER mutate the main RingBuffer during predict.
+* ResidualStatsTracker and normalization MUST be applied consistently to prevent scale drift and confidence drift.
+
+IMPORTANT CONSTRAINT NOTE
+
+* fitOnline does NOT support observe-only. Therefore: xCoordinates.length MUST equal yCoordinates.length; otherwise throw Error (no partial ingestion behavior).
+
+MODEL ARCHITECTURE (ESN / RESERVOIR COMPUTING)
+
+Input/shape
+
+* Input is a multivariate time series row x_t with shape [nFeatures] (batch fixed to 1).
+* The internal history window has shape [seqLen, nFeatures] assembled from RingBuffer with seqLen <= maxSequenceLength.
+
+Reservoir state
+
+* Maintain a reservoir state vector r_t with shape [reservoirSize].
+
+* Update per timestep using a leaky integrator ESN:
+
+  r_t = (1 - leakRate) * r_{t-1} + leakRate * activation( Win * x_t + W * r_{t-1} + bias )
+
+* activation is tanh by default (or configurable).
+
+* Win (reservoirSize x nFeatures) and W (reservoirSize x reservoirSize) are fixed after initialization (not trained) and MUST be deterministic with seed.
+
+* Enforce echo-state behavior by scaling W to targetSpectralRadius and applying sparse connectivity (optional) at init.
+
+* Optional input scaling and state scaling parameters must be supported (fixed after init).
+
+Readout (trainable)
+
+* Train ONLY a linear readout layer that maps extended state z_t to outputs:
+
+  z_t = [r_t; x_t; 1]  (configurable inclusion of x_t and bias)
+  y_hat_t = Wout * z_t
+
+* Wout has shape [nTargets * maxFutureSteps, zDim] for direct multi-horizon output (preferred default).
+
+* Alternative: for single-step output, Wout has shape [nTargets, zDim] and multi-step uses optional recursive roll-forward.
+
+Online learning algorithm (readout)
+
+* Default training MUST be allocation-free and online:
+
+  * Use RLS (Recursive Least Squares) to update Wout each sample with forgetting factor rlsLambda, inverse-covariance P matrix, and initialization scale rlsDelta.
+  * Include L2 regularization via l2Lambda on readout weights (implemented in a numerically stable way compatible with RLS).
+* The readout update is always incremental, with fixed-size matrix updates (no backprop, no Adam).
+
+Multi-step forecasting
+
+* Direct multi-horizon head (preferred default): outputDim = nTargets * maxFutureSteps; single state update / forward; slice requested steps.
+* Optional recursive roll-forward: generate one step at a time using a separate scratch rollforward buffer (no allocations) and NEVER corrupt the main history buffer.
+* Recursive roll-forward MUST be explicitly configured and MUST NOT implicitly feed predictions into the RingBuffer.
 
 SCOPE OF “AUTOMATIC LAGS”
-The model must learn effective lags implicitly via convolution kernels and dilations within the fixed receptive field.
-Enforce maxSequenceLength (lookback) as a hard cap; truncate/stride inputs rather than allocate larger buffers.
+
+* The model learns effective lags implicitly via reservoir fading memory and nonlinear state dynamics.
+* Enforce maxSequenceLength as a HARD cap for any window assembly and optional state warmup; truncate history rather than allocate larger buffers.
+* Reservoir memory length is controlled by leakRate, spectralRadius, and (optional) input scaling; document these relationships.
 
 PERFORMANCE PRINCIPLES (HARD REQUIREMENTS)
-Fixed-size memory: preallocate all parameter, gradient, optimizer-moment, activation, and scratch buffers once at initialization; never grow during training.
-No attention matrices: do not implement self-attention; all temporal mixing is via causal dilated convolutions with fixed buffers.
-Typed-array only core: all tensors live in contiguous Float64Array slabs in row-major layout; expose zero-copy views via (data, offset, shape, strides).
-No hot-path allocations: forward(), backward(), fitOnline() must allocate 0 arrays/objects per call; all temporaries come from TensorArena and BufferPool.
-Strict reuse policy: rent scratch buffers by size class, return immediately; no new Float64Array inside inner loops.
-In-place and fused kernels: prefer fused ops (conv+bias+activation, residual add, normalization) and in-place transforms to avoid intermediates.
-Deterministic caps: enforce maxSequenceLength and maxBatch=1; if inputs exceed limits, truncate/stride rather than allocating more memory.
-Minimal training tape: store only what backprop strictly needs (compact pre-activations, indices, and small stats); recompute cheap intermediates instead of caching large activations.
-Tight loops only: classic for-loops with manual indexing; avoid map/reduce/forEach, closures, and polymorphic dispatch in inner loops.
-Cache once, reuse forever: dilation schedules, convolution index maps, padding rules, and shape metadata computed once and reused; lazy init allowed, but never re-init.
-GC guardrails: pool small objects (TensorView, ForwardContext shells, ADWIN nodes); keep debug and verbose metrics off by default.
+
+* Fixed-size memory: preallocate all parameter, state, covariance (P) for RLS, buffers, and scratch once at initialization; never grow during training.
+* No attention matrices and no convolutions: do not implement self-attention or Conv1D; all temporal mixing is via reservoir recurrence with fixed buffers.
+* Typed-array only core: all tensors live in contiguous Float64Array slabs in row-major layout; expose zero-copy views via (data, offset, shape, strides).
+* No hot-path allocations: updateReservoirState(), forward(), fitOnline(), predict() MUST allocate 0 arrays/objects per call; all temporaries come from TensorArena and BufferPool.
+* Strict reuse policy: rent scratch buffers by size class, return immediately; no new Float64Array inside inner loops.
+* In-place and fused kernels: prefer fused ops (matvec+bias+activation, leaky update, readout matvec, RLS update steps) and in-place transforms to avoid intermediates.
+* Deterministic caps: enforce maxSequenceLength and maxBatch=1; if inputs exceed limits, truncate/stride rather than allocating more memory.
+* Minimal training tape: no full backprop tape; store only what RLS needs (current z_t, scalar denom, gain vector, and small stats).
+* Tight loops only: classic for-loops with manual indexing; avoid map/reduce/forEach, closures, iterator protocols, and polymorphic dispatch in inner loops.
+* Cache once, reuse forever: initialization masks, sparsity patterns, scale factors, and shape metadata computed once and reused; lazy init allowed, but never re-init.
+* GC guardrails: pool small objects (TensorView, ForwardContext shells); keep debug and verbose metrics off by default.
 
 DESIGN PRINCIPLES (HARD REQUIREMENTS)
-Full numerical stability throughout (epsilon guards, finite checks, variance floors).
-Object-oriented design with interfaces for public contracts; private field encapsulation for internal state.
-JSDoc on public methods and key classes (@param, @returns, @example).
-Inline math formula notes where it clarifies behavior (normalization, loss, Adam, convolution, receptive field).
-Full backpropagation across all layers (no partial training shortcuts).
 
-PUBLIC API (MUST MATCH)
+* Full numerical stability throughout (epsilon guards, finite checks, variance floors, RLS stabilization).
+* Object-oriented design with interfaces for public contracts; private field encapsulation for internal state.
+* JSDoc on public methods and key classes (@param, @returns, @example).
+* Inline math formula notes where it clarifies behavior (normalization, loss, RLS, reservoir update, spectral radius scaling).
+* NO full backpropagation through time and NO training of reservoir weights; only trainable component is the readout Wout.
+
+PUBLIC API (MUST MATCH EXACTLY)
+
 fitOnline({ xCoordinates: number[][], yCoordinates: number[][] }): FitResult
-Behavior: incremental Adam update, Welford z-score, L2 regularization, outlier downweighting, ADWIN drift detection.
-predict(futureSteps: number): PredictionResult
-Behavior: forward-only inference with optional multi-horizon direct head or recursive roll-forward using internal ring buffer; return uncertainty bounds from ResidualStatsTracker.
+
+* Validate strictly: xCoordinates.length === yCoordinates.length. If mismatch, throw Error.
+* For i in 0..N-1, the order is mandatory and must never change:
+
+  1. Push xCoordinates[i] into RingBuffer FIRST.
+  2. Then run: normalize, updateReservoirState (state warmup uses history window ending at latest X), forwardTrain, loss, outlier weight, L2/readout regularization, readoutUpdate (RLS), residual update.
+* Reuse a single FitResult object (no per-call allocations).
+
+predict(futureSteps: number): PredictionResult (with confidence based on loss)
+
+* Uses ONLY internal RingBuffer to assemble the latest input window (ending at the most recent ingested X).
+* Validate: 1 <= futureSteps <= maxFutureSteps.
+* Direct multi-horizon (default): compute current reservoir state consistently (including normalization) and do single readout; slice requested steps.
+* Recursive (optional): uses separate scratch rollforward window and scratch state copy; never mutates RingBuffer or live reservoir state.
+* Denormalize outputs and return uncertainty bounds from ResidualStatsTracker.
+* MUST be deterministic and allocation-free in hot path.
+
 getModelSummary(): ModelSummary
 getWeights(): WeightInfo
 getNormalizationStats(): NormalizationStats
 reset(): void
-save(): string
-Behavior: JSON.stringify of all state data.
-load(w: string): void
-Behavior: restore all state data from JSON.
+save(): string  (JSON.stringify of all state)
+load(w: string): void  (restore all state)
 
+RESULT TYPES:
 
-SETTINGS WITH DEFAULT VALUES
+/**
 
-TCNRegressionConfig {
-  maxSequenceLength: number              // Default: 64, maximum lookback window (receptive field cap)
-  maxFutureSteps: number                 // Default: 1, maximum prediction horizon
+* Result of fitOnline() call.
+  */
+  export interface FitResult {
+  /** Number of samples processed */
+  samplesProcessed: number;
+  /** Average loss over processed samples */
+  averageLoss: number;
+  /** Final readout update norm */
+  gradientNorm: number;
+  /** Whether concept drift was detected */
+  driftDetected: boolean;
+  /** Current sample weight (outlier-adjusted) */
+  sampleWeight: number;
+  }
 
-  hiddenChannels: number                 // Default: 32, channels in TCN blocks
-  nBlocks: number                        // Default: 4, number of residual TCN blocks
-  kernelSize: number                     // Default: 3, convolution kernel size
-  dilationBase: number                   // Default: 2, dilation growth factor (dilations = base^blockIndex)
-  useTwoLayerBlock: boolean              // Default: true, use 2 conv layers per TCN block
-  activation: "relu" | "gelu"            // Default: "relu"
-  useLayerNorm: boolean                  // Default: false, enable channel normalization
-  dropoutRate: number                    // Default: 0.0, dropout probability (training only)
+Note: driftDetected MUST remain in FitResult for API compatibility; since ADWIN is removed, set driftDetected=false always (unless you implement an alternative drift heuristic without extra allocations).
 
-  learningRate: number                   // Default: 0.001
-  beta1: number                          // Default: 0.9, Adam first moment decay
-  beta2: number                          // Default: 0.999, Adam second moment decay
-  epsilon: number                        // Default: 1e-8, Adam epsilon for stability
-  l2Lambda: number                       // Default: 0.0001, L2 regularization coefficient
-  gradientClipNorm: number               // Default: 1.0, max gradient L2 norm
+/**
 
-  normalizationEpsilon: number           // Default: 1e-8, Welford variance floor
-  normalizationWarmup: number            // Default: 10, samples before applying z-score
-  outlierThreshold: number               // Default: 3.0, z-score threshold for downweighting
-  outlierMinWeight: number               // Default: 0.1, minimum sample weight for outliers
+* Result of predict() call.
+  */
+  export interface PredictionResult {
+  /** Predictions for each future step: [step][target] */
+  predictions: number[][];
+  /** Lower confidence bounds: [step][target] */
+  lowerBounds: number[][];
+  /** Upper confidence bounds: [step][target] */
+  upperBounds: number[][];
+  /** Confidence score based on recent loss */
+  confidence: number;
+  }
 
-  adwinEnabled: boolean                  // Default: true, enable ADWIN drift detection
-  adwinDelta: number                     // Default: 0.002, ADWIN significance parameter
-  adwinMaxBuckets: number                // Default: 64, max ADWIN bucket count (memory cap)
+/**
 
-  useDirectMultiHorizon: boolean         // Default: true, direct head vs recursive rollforward
-  residualWindowSize: number             // Default: 100, samples for uncertainty estimation
-  uncertaintyMultiplier: number          // Default: 1.96, z-multiplier for confidence bounds
+* Model summary information.
+  */
+  export interface ModelSummary {
+  /** Total number of trainable parameters */
+  totalParameters: number;
+  /** Effective memory horizon in timesteps (approx from config) */
+  receptiveField: number;
+  /** Reservoir spectral radius */
+  spectralRadius: number;
+  /** Reservoir size */
+  reservoirSize: number;
+  /** Input features */
+  nFeatures: number;
+  /** Output targets */
+  nTargets: number;
+  /** Maximum sequence length */
+  maxSequenceLength: number;
+  /** Maximum future steps */
+  maxFutureSteps: number;
+  /** Training samples seen */
+  sampleCount: number;
+  /** Whether direct multi-horizon is enabled */
+  useDirectMultiHorizon: boolean;
+  }
 
-  weightInitScale: number                // Default: 0.1, Xavier/He init scale factor
-  seed: number                           // Default: 42, deterministic RNG seed
-  verbose: boolean                       // Default: false, enable debug logging
+/**
+
+* Weight information for inspection.
+  */
+  export interface WeightInfo {
+  /** Named weight tensors */
+  weights: Array<{ name: string; shape: number[]; values: number[] }>;
+  }
+
+/**
+
+* Normalization statistics.
+  */
+  export interface NormalizationStats {
+  /** Feature-wise means */
+  means: number[];
+  /** Feature-wise standard deviations */
+  stds: number[];
+  /** Number of samples used */
+  count: number;
+  /** Whether normalization is active (warmup complete) */
+  isActive: boolean;
+  }
+
+SETTINGS WITH DEFAULT VALUES (MUST MATCH)
+
+ESNRegressionConfig {
+maxSequenceLength: number              // Default: 64
+maxFutureSteps: number                 // Default: 1
+reservoirSize: number                  // Default: 256
+spectralRadius: number                 // Default: 0.9
+leakRate: number                       // Default: 0.3
+inputScale: number                     // Default: 1.0
+biasScale: number                      // Default: 0.1
+reservoirSparsity: number              // Default: 0.9      // fraction of zeros in W
+inputSparsity: number                  // Default: 0.0      // optional sparsity for Win
+activation: "tanh" | "relu"            // Default: "tanh"
+useInputInReadout: boolean             // Default: true
+useBiasInReadout: boolean              // Default: true
+readoutTraining: "rls"                 // Default: "rls"
+rlsLambda: number                      // Default: 0.999
+rlsDelta: number                       // Default: 1.0
+epsilon: number                        // Default: 1e-8
+l2Lambda: number                       // Default: 0.0001
+gradientClipNorm: number               // Default: 1.0      // applies to readout updates
+normalizationEpsilon: number           // Default: 1e-8
+normalizationWarmup: number            // Default: 10
+outlierThreshold: number               // Default: 3.0
+outlierMinWeight: number               // Default: 0.1
+useDirectMultiHorizon: boolean         // Default: true
+residualWindowSize: number             // Default: 100
+uncertaintyMultiplier: number          // Default: 1.96
+weightInitScale: number                // Default: 0.1
+seed: number                           // Default: 42
+verbose: boolean                       // Default: false
 }
 
-CLASSES
+CLASSES (MUST IMPLEMENT EXACTLY AS LISTED)
+Implement the following classes exactly as listed, using typed arrays, fixed-size preallocation, and pooled shell objects as required:
+TensorShape, TensorView, TensorArena, BufferPool, TensorOps, ActivationOps, RandomGenerator,
+WelfordAccumulator, WelfordNormalizer, LayerNormParams, LayerNormOps,
+GradientAccumulator,
+ReservoirInitMask, SpectralRadiusScaler, ESNReservoirParams, ESNReservoir,
+ReadoutConfig, ReadoutParams, LinearReadout, RLSState, RLSOptimizer,
+LinearLayerParams, LinearLayer, DropoutMask,
+ForwardContext, BackwardContext, GradientTape,
+RingBuffer, ResidualStatsTracker,
+OutlierDownweighter, LossFunction, MetricsAccumulator,
+ESNModelConfig, ESNModel, TrainingState, InferenceState,
+FitResult, PredictionResult, ModelSummary, WeightInfo, NormalizationStats,
+SerializationHelper, ESNRegression.
+
+IMPLEMENTATION ORDER (KEEP FOCUSED AND FAST)
+
+1. Memory infra: TensorShape, TensorView, BufferPool, TensorArena, TensorOps.
+2. Numerics: RNG, activations, Welford normalizers, loss.
+3. Readout training: RLSState + RLSOptimizer (online, fixed-size P matrix).
+4. Reservoir: init masks, sparse W/Win init, spectral radius scaling, ESNReservoir update kernel.
+5. Readout/head: LinearReadout for direct multi-horizon, slicing logic, optional recursive roll-forward with scratch state.
+6. Training utilities: RingBuffer, ResidualStatsTracker, outlier downweighting, metrics.
+7. ESNModel assembly and parameter registry (trainable readout only).
+8. ESNRegression public API enforcing the Critical Behavioral Requirements (especially: ingest X first, correct predict window).
+9. Serialization save/load for full state and determinism.
 
-TensorShape
-  Immutable descriptor holding dimensions array and precomputed strides for row-major layout. Validates shape on construction and provides indexing helpers.
-
-TensorView
-  Zero-copy view into a Float64Array slab. Holds reference to underlying data, offset, shape, and strides. Provides get/set by multi-index, slice views, and reshape without allocation. Poolable shell object.
-
-TensorArena
-  Preallocated contiguous Float64Array slab sized at initialization. Allocates views via bump pointer. Supports mark/release for scoped temporaries. Never grows after init.
-
-BufferPool
-  Manages reusable scratch buffers organized by size class (powers of two). Rent returns existing buffer or creates one if pool empty. Return recycles buffer. Tracks high-water mark for diagnostics.
-
-TensorOps
-  Static utility class with low-level tensor operations: fill, copy, add, scale, axpy, dot, sum, max, matmul, transpose. All operate on TensorView or raw arrays with explicit offsets/strides. No allocations.
-
-ActivationOps
-  Static class for activation functions and their derivatives: relu, reluBackward, gelu, geluBackward. In-place variants provided. Uses precomputed constants for GELU approximation.
-
-RandomGenerator
-  Deterministic PRNG using xorshift128+ algorithm. Seeded at construction. Provides uniform, gaussian (Box-Muller), and truncatedGaussian methods. Single instance reused throughout.
-
-WelfordAccumulator
-  Tracks running mean and variance for a single scalar using Welford online algorithm. Provides update, getMean, getVariance, getStd methods. Numerically stable for streaming data.
-
-WelfordNormalizer
-  Manages array of WelfordAccumulator instances for multi-feature normalization. Provides updateStats (partial fit), normalize (z-score transform), denormalize (inverse transform). Applies variance floor epsilon.
-
-LayerNormParams
-  Holds learnable gamma and beta parameter arrays for layer normalization. Initializes gamma to ones, beta to zeros.
-
-LayerNormOps
-  Static methods for layer normalization forward and backward. Computes mean/variance across channel dimension, normalizes, scales by gamma, shifts by beta. Stores stats for backward pass.
-
-GradientAccumulator
-  Holds gradient buffer matching parameter shape. Provides accumulate (add gradient), scale, clip (by norm), and zero methods. Used by optimizer.
-
-AdamState
-  Stores first moment (m) and second moment (v) buffers for a single parameter tensor. Provides update method implementing Adam rule with bias correction. Preallocated at init.
-
-AdamOptimizer
-  Manages collection of AdamState instances keyed by parameter name. Provides step method that updates all parameters given accumulated gradients. Applies learning rate, L2 decay, gradient clipping.
-
-ParameterSet
-  Container for named parameter tensors (weights, biases). Provides iteration, serialization, total parameter count. Each parameter has associated GradientAccumulator and AdamState.
-
-ConvIndexMap
-  Precomputed index lookup table for causal dilated convolution. Given kernel size, dilation, and sequence length, stores input indices for each output position. Built once, reused forever.
-
-CausalConv1DParams
-  Holds weight tensor of shape [outChannels, inChannels, kernelSize] and bias tensor of shape [outChannels]. Provides initialization and serialization.
-
-CausalConv1D
-  Causal dilated 1D convolution layer. Uses ConvIndexMap for efficient indexing. Forward computes conv+bias into output buffer. Backward computes gradients for weights, bias, and input. No padding allocation.
-
-Conv1x1Params
-  Holds weight tensor of shape [outChannels, inChannels] and bias tensor of shape [outChannels]. For residual projection when channel dimensions differ.
-
-Conv1x1
-  Pointwise 1x1 convolution for channel projection. Implemented as batched matrix multiply across time steps. Forward and backward methods operate in-place on provided buffers.
-
-LinearLayerParams
-  Holds weight matrix of shape [outDim, inDim] and bias vector of shape [outDim].
-
-LinearLayer
-  Fully connected layer. Forward computes Wx+b. Backward computes gradients for weights, bias, and input. Used for final prediction head.
-
-DropoutMask
-  Preallocated binary mask buffer. generateMask fills with Bernoulli samples scaled by 1/(1-p). applyForward multiplies activations. applyBackward multiplies gradients. Bypassed when rate is zero.
-
-TCNBlockConfig
-  Configuration for single TCN block: inChannels, outChannels, kernelSize, dilation, useTwoLayers, activation, useNorm, dropoutRate.
-
-TCNBlockParams
-  Aggregates CausalConv1DParams for primary conv (and optional second conv), optional Conv1x1Params for residual projection, optional LayerNormParams.
-
-TCNBlock
-  Single residual TCN block. Forward: conv1 -> activation -> [conv2 -> activation] -> [norm] -> [dropout] -> residual add. Backward: reverse chain with stored activations. Manages own scratch buffers from pool.
-
-TCNBackboneConfig
-  Configuration for full backbone: nFeatures, hiddenChannels, nBlocks, kernelSize, dilationBase, activation, useNorm, dropoutRate, maxSeqLen.
-
-TCNBackbone
-  Stack of TCNBlock instances with computed dilation schedule. Forward passes input through all blocks sequentially. Backward propagates gradients through all blocks in reverse. Outputs final hidden state.
-
-MultiHorizonHeadConfig
-  Configuration for output head: hiddenChannels, nTargets, maxFutureSteps, useDirectHead.
-
-MultiHorizonHead
-  Output projection from backbone hidden state to predictions. If direct: single LinearLayer mapping last timestep to [nTargets * maxFutureSteps]. If recursive: LinearLayer mapping to [nTargets], used iteratively.
-
-ForwardContext
-  Lightweight shell object holding references to intermediate activations needed for backward pass. Allocated from pool, populated during forward, consumed during backward, returned to pool.
-
-BackwardContext
-  Shell object holding gradient buffers and chain rule intermediates during backward pass. Rented from pool, used within backward, returned immediately after.
-
-GradientTape
-  Minimal tape recording layer execution order and storing ForwardContext references. Provides backward method that walks tape in reverse calling each layer's backward. Clears after each backward.
-
-RingBuffer
-  Fixed-size circular buffer for sequence history. Stores [maxSeqLen, nFeatures] data. Provides push (add new timestep), getWindow (return contiguous view of last N steps via copy to scratch). No growth.
-
-ResidualStatsTracker
-  Circular buffer storing recent prediction residuals. Computes rolling mean and std for uncertainty estimation. Provides getUncertaintyBounds given prediction and multiplier.
-
-ADWINBucket
-  Single bucket in ADWIN data structure. Holds sum, variance, count for a range of samples. Poolable object.
-
-ADWINDetector
-  Adaptive windowing algorithm for concept drift detection. Maintains hierarchical buckets with exponential compression. Provides update (add sample), hasChange (detected drift), getCurrentMean. Capped bucket count.
-
-OutlierDownweighter
-  Computes sample weight based on prediction error z-score. If error exceeds threshold, returns reduced weight. Used to downweight outlier influence during training.
-
-LossFunction
-  Static methods for MSE loss and its gradient. Computes mean squared error over targets, optionally weighted. Returns scalar loss and fills gradient buffer.
-
-MetricsAccumulator
-  Tracks running loss, MAE, sample count for reporting. Provides update, getMetrics, reset methods.
-
-TCNModelConfig
-  Full model configuration combining TCNBackboneConfig and MultiHorizonHeadConfig with sequence/feature dimensions.
-
-TCNModel
-  Core neural network class. Holds TCNBackbone, MultiHorizonHead, all ParameterSets. Provides forward (inference), forwardTrain (with tape), backward (gradient computation), getParameters, setParameters.
-
-TrainingState
-  Holds current epoch/sample count, cumulative loss, AdamOptimizer, GradientTape, training mode flag. Serializable for checkpointing.
-
-InferenceState
-  Holds RingBuffer for input history, last predictions, recursive rollforward buffers. Used during predict calls.
-
-FitResult
-  Return type for fitOnline: loss, sampleWeight, driftDetected, metrics object.
-
-PredictionResult
-  Return type for predict: predictions array [futureSteps, nTargets], uncertaintyLower, uncertaintyUpper, confidence.
-
-ModelSummary
-  Return type for getModelSummary: architecture description, parameter counts per layer, receptive field, memory usage estimate.
-
-WeightInfo
-  Return type for getWeights: nested structure of all parameter tensors as number arrays with shape metadata.
-
-NormalizationStats
-  Return type for getNormalizationStats: means and stds for inputs and outputs, sample count, warmup status.
-
-SerializationHelper
-  Static methods for converting model state to/from JSON-safe format. Handles Float64Array encoding, nested objects, version tagging.
-
-TCNRegression
-  Main public API class. Constructs and owns TCNModel, WelfordNormalizer, AdamOptimizer, RingBuffer, ResidualStatsTracker, ADWINDetector, BufferPool, TensorArena. Implements fitOnline, predict, getModelSummary, getWeights, getNormalizationStats, reset, save, load.
-
-IMPLEMENTATION PLAN
-
-PHASE 1: MEMORY INFRASTRUCTURE
-1.1 Implement TensorShape class
-    - Constructor validates dimensions (positive integers)
-    - Compute strides for row-major layout: stride[i] = product(dims[i+1:])
-    - Method: numel() returns total elements
-    - Method: index(...indices) computes flat offset
-    - Immutable after construction
-
-1.2 Implement TensorView class
-    - Constructor takes (data: Float64Array, offset: number, shape: TensorShape)
-    - Validate offset + shape.numel() <= data.length
-    - Method: get(...indices) returns data[offset + shape.index(...indices)]
-    - Method: set(...indices, value) writes to computed offset
-    - Method: slice(dim, start, end) returns new TensorView without allocation via pool
-    - Method: reshape(newShape) returns view with same data, different shape
-    - Method: fill(value) fills region with constant
-    - Method: copyFrom(other: TensorView) copies data
-
-1.3 Implement BufferPool class
-    - Private map: sizeClass -> array of available Float64Array
-    - Method: rent(minSize) computes sizeClass = nextPowerOfTwo(minSize), returns from pool or creates new
-    - Method: return(buffer) pushes to appropriate size class pool
-    - Method: getStats() returns pool sizes and high-water marks
-    - Size classes: 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768
-
-1.4 Implement TensorArena class
-    - Constructor takes totalSize, allocates single Float64Array
-    - Private: offset pointer starts at 0
-    - Method: alloc(shape: TensorShape) returns TensorView at current offset, advances offset
-    - Method: mark() returns current offset
-    - Method: release(mark) resets offset to mark
-    - Method: reset() sets offset to 0
-    - Throws if allocation exceeds capacity
-
-1.5 Implement TensorOps static class
-    - fill(view, value): for loop setting all elements
-    - copy(dst, src): for loop copying elements
-    - add(dst, a, b): element-wise dst[i] = a[i] + b[i]
-    - addInPlace(dst, src): dst[i] += src[i]
-    - scale(dst, src, s): dst[i] = src[i] * s
-    - scaleInPlace(dst, s): dst[i] *= s
-    - axpy(dst, a, x, y): dst[i] = a * x[i] + y[i]
-    - dot(a, b): sum of a[i] * b[i]
-    - sum(view): sum of all elements
-    - max(view): maximum element
-    - matmul(dst, A, B, M, K, N): classic triple loop matrix multiply
-    - transpose(dst, src, rows, cols): dst[j*rows+i] = src[i*cols+j]
-
-PHASE 2: NUMERICAL UTILITIES
-2.1 Implement RandomGenerator class
-    - Constructor takes seed, initializes xorshift128+ state
-    - Method: nextFloat() returns uniform [0, 1)
-    - Method: nextGaussian() uses Box-Muller with cached second value
-    - Method: truncatedGaussian(std, limit) rejects samples outside limit
-
-2.2 Implement ActivationOps static class
-    - relu(dst, src, len): dst[i] = max(0, src[i])
-    - reluInPlace(data, len): data[i] = max(0, data[i])
-    - reluBackward(dOut, dIn, preAct, len): dIn[i] = preAct[i] > 0 ? dOut[i] : 0
-    - gelu(dst, src, len): approximate GELU = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-    - geluInPlace(data, len): in-place GELU
-    - geluBackward(dOut, dIn, preAct, len): derivative of GELU approximation
-
-2.3 Implement WelfordAccumulator class
-    - Private: count, mean, m2 (sum of squared deviations)
-    - Method: update(value): Welford single-pass update
-      - count++
-      - delta = value - mean
-      - mean += delta / count
-      - delta2 = value - mean
-      - m2 += delta * delta2
-    - Method: getMean(): return mean
-    - Method: getVariance(): return count > 1 ? m2 / (count - 1) : 0
-    - Method: getStd(): return sqrt(max(variance, epsilon))
-    - Method: reset(): zero all state
-    - Method: serialize/deserialize for save/load
-
-2.4 Implement WelfordNormalizer class
-    - Constructor takes nFeatures, epsilon, warmupSamples
-    - Private: array of WelfordAccumulator for inputs, array for outputs
-    - Method: updateInputStats(features: number[]): update each accumulator
-    - Method: updateOutputStats(targets: number[]): update each accumulator
-    - Method: normalizeInputs(dst, src): dst[i] = (src[i] - mean[i]) / std[i] if count >= warmup, else copy
-    - Method: normalizeOutputs(dst, src): same for outputs
-    - Method: denormalizeOutputs(dst, src): dst[i] = src[i] * std[i] + mean[i]
-    - Method: getStats(): return means, stds, count
-    - Method: reset(): reset all accumulators
-
-2.5 Implement LossFunction static class
-    - mse(predictions, targets, len): sum((pred - target)^2) / len
-    - mseWeighted(predictions, targets, weight, len): weight * mse
-    - mseGradient(dLoss, predictions, targets, len): dLoss[i] = 2 * (pred[i] - target[i]) / len
-    - mseGradientWeighted(dLoss, predictions, targets, weight, len): scaled gradient
-    - l2Regularization(params, lambda): sum of squared params * lambda
-    - l2Gradient(dParams, params, lambda, len): dParams[i] += 2 * lambda * params[i]
-
-PHASE 3: OPTIMIZER
-3.1 Implement GradientAccumulator class
-    - Constructor takes size, allocates Float64Array for gradients
-    - Method: accumulate(gradients, len): add to buffer
-    - Method: scale(s): multiply buffer by s
-    - Method: clipByNorm(maxNorm): compute L2 norm, scale if exceeds max
-    - Method: zero(): fill with 0
-    - Method: getData(): return buffer reference
-
-3.2 Implement AdamState class
-    - Constructor takes size, allocates m and v buffers (Float64Array)
-    - Method: update(params, grads, lr, beta1, beta2, epsilon, t, len)
-      - For each i:
-        - m[i] = beta1 * m[i] + (1 - beta1) * grads[i]
-        - v[i] = beta2 * v[i] + (1 - beta2) * grads[i]^2
-        - mHat = m[i] / (1 - beta1^t)
-        - vHat = v[i] / (1 - beta2^t)
-        - params[i] -= lr * mHat / (sqrt(vHat) + epsilon)
-    - Method: reset(): zero m and v
-    - Method: serialize/deserialize
-
-3.3 Implement AdamOptimizer class
-    - Constructor takes config (lr, beta1, beta2, epsilon, clipNorm, l2Lambda)
-    - Private: Map<string, AdamState>, timestep counter
-    - Method: registerParameter(name, size): create AdamState for parameter
-    - Method: step(parameterSets: Map<string, {params, grads}>)
-      - Increment timestep
-      - For each parameter:
-        - Apply gradient clipping
-        - Apply L2 gradient
-        - Call AdamState.update
-        - Zero gradients after update
-    - Method: reset(): reset all states and timestep
-    - Method: getTimestep(): return current t
-    - Method: serialize/deserialize
-
-PHASE 4: CONVOLUTION LAYERS
-4.1 Implement ConvIndexMap class
-    - Constructor takes kernelSize, dilation, inputLen, outputLen
-    - Precompute: for each output position t, for each kernel position k:
-      - inputIndex = t - k * dilation (causal: only past inputs)
-      - Store -1 if index < 0 (zero padding)
-    - Store as flat Int32Array: [outputLen * kernelSize]
-    - Method: getInputIndex(outPos, kernelPos): return precomputed index
-
-4.2 Implement CausalConv1DParams class
-    - Constructor takes inChannels, outChannels, kernelSize
-    - Allocate weight: Float64Array[outChannels * inChannels * kernelSize]
-    - Allocate bias: Float64Array[outChannels]
-    - Method: initialize(rng, scale): Xavier/He init
-      - std = scale * sqrt(2 / (inChannels * kernelSize))
-      - weights from truncatedGaussian(std)
-      - bias = 0
-    - Method: getWeight(outC, inC, k): compute index, return value
-    - Method: setWeight(outC, inC, k, value): compute index, set value
-
-4.3 Implement CausalConv1D class
-    - Constructor takes inChannels, outChannels, kernelSize, dilation, maxSeqLen
-    - Create CausalConv1DParams
-    - Create ConvIndexMap
-    - Create GradientAccumulator for weights and bias
-    - Method: forward(output, input, seqLen)
-      - output shape: [seqLen, outChannels]
-      - input shape: [seqLen, inChannels]
-      - For each t in 0..seqLen:
-        - For each outC in 0..outChannels:
-          - sum = bias[outC]
-          - For each k in 0..kernelSize:
-            - inIdx = indexMap.getInputIndex(t, k)
-            - If inIdx >= 0:
-              - For each inC in 0..inChannels:
-                - sum += weight[outC, inC, k] * input[inIdx, inC]
-          - output[t, outC] = sum
-    - Method: backward(dInput, dOutput, input, seqLen)
-      - Accumulate weight gradients
-      - Accumulate bias gradients
-      - Compute input gradients if dInput not null
-      - Use transposed convolution logic
-
-4.4 Implement Conv1x1 class
-    - Constructor takes inChannels, outChannels
-    - Allocate weight [outChannels, inChannels], bias [outChannels]
-    - Method: forward(output, input, seqLen)
-      - For each t: output[t] = weight @ input[t] + bias
-    - Method: backward(dInput, dOutput, input, seqLen)
-      - Accumulate gradients, compute dInput
-
-PHASE 5: TCN BLOCKS
-5.1 Implement DropoutMask class
-    - Constructor takes maxSize
-    - Allocate mask buffer Float64Array[maxSize]
-    - Method: generate(rng, size, dropRate)
-      - If dropRate == 0: fill with 1.0
-      - Else: Bernoulli(1-p) scaled by 1/(1-p)
-    - Method: applyForward(data, size): data[i] *= mask[i]
-    - Method: applyBackward(grad, size): grad[i] *= mask[i]
-
-5.2 Implement LayerNormParams class
-    - Constructor takes channels
-    - Allocate gamma [channels] initialized to 1
-    - Allocate beta [channels] initialized to 0
-    - Create GradientAccumulator for each
-
-5.3 Implement LayerNormOps static class
-    - forward(output, input, gamma, beta, stats, channels, seqLen)
-      - For each t:
-        - Compute mean across channels
-        - Compute variance across channels
-        - Store mean, variance in stats for backward
-        - Normalize: (x - mean) / sqrt(var + eps)
-        - Scale and shift: gamma * norm + beta
-    - backward(dInput, dGamma, dBeta, dOutput, input, stats, gamma, channels, seqLen)
-      - Compute gradients for gamma, beta, and input
-
-5.4 Implement TCNBlock class
-    - Constructor takes config (inC, outC, kernel, dilation, twoLayer, activation, norm, dropout, maxSeqLen)
-    - Create CausalConv1D for conv1
-    - If twoLayer: create CausalConv1D for conv2 (outC -> outC)
-    - If inC != outC: create Conv1x1 for residual projection
-    - If norm: create LayerNormParams
-    - Create DropoutMask
-    - Allocate activation buffers from arena
-    - Method: forward(output, input, seqLen, training, context, pool)
-      - conv1.forward(act1, input)
-      - activation(act1)
-      - If twoLayer: conv2.forward(act2, act1), activation(act2)
-      - If norm: layerNorm(normed, act)
-      - If training && dropout > 0: applyDropout
-      - Compute residual: if projection needed, project input
-      - output = act + residual
-      - Store needed values in context for backward
-    - Method: backward(dInput, dOutput, context, pool)
-      - Reverse the forward operations
-      - Accumulate all gradients
-
-5.5 Implement TCNBackbone class
-    - Constructor takes config (nFeatures, hiddenChannels, nBlocks, kernelSize, dilationBase, etc.)
-    - Compute dilation schedule: [1, 2, 4, 8, ...] repeating if needed
-    - Compute receptive field: sum of (kernel-1) * dilation for all layers
-    - Create array of TCNBlock with appropriate configs
-      - Block 0: nFeatures -> hiddenChannels, dilation[0]
-      - Block i: hiddenChannels -> hiddenChannels, dilation[i]
-    - Method: forward(output, input, seqLen, training, context)
-      - Pass through blocks sequentially
-      - Return final hidden state
-    - Method: backward(dInput, dOutput, context)
-      - Backward through blocks in reverse order
-    - Method: getReceptiveField(): return computed receptive field
-
-PHASE 6: OUTPUT HEAD
-6.1 Implement LinearLayerParams class
-    - Constructor takes inDim, outDim
-    - Allocate weight [outDim, inDim], bias [outDim]
-    - Create GradientAccumulators
-    - Method: initialize(rng, scale)
-
-6.2 Implement LinearLayer class
-    - Constructor takes inDim, outDim
-    - Create LinearLayerParams
-    - Method: forward(output, input)
-      - output = weight @ input + bias
-    - Method: backward(dInput, dOutput, input)
-      - dWeight += outer(dOutput, input)
-      - dBias += dOutput
-      - dInput = weight^T @ dOutput
-
-6.3 Implement MultiHorizonHead class
-    - Constructor takes hiddenChannels, nTargets, maxFutureSteps, useDirect
-    - If useDirect: create LinearLayer(hiddenChannels, nTargets * maxFutureSteps)
-    - Else: create LinearLayer(hiddenChannels, nTargets) for recursive use
-    - Method: forward(output, hidden, futureSteps, context)
-      - If direct: single forward, reshape to [futureSteps, nTargets]
-      - If recursive: not used in forward (handled by TCNRegression)
-    - Method: backward(dHidden, dOutput, context)
-      - Backprop through linear layer
-
-PHASE 7: MODEL ASSEMBLY
-7.1 Implement ForwardContext class
-    - Poolable shell with slots for:
-      - backboneContext (activations per block)
-      - headContext (pre-activation for linear)
-      - input copy (for gradient computation)
-      - seqLen used
-    - Method: reset(): clear all references
-
-7.2 Implement GradientTape class
-    - Private: array of ForwardContext references
-    - Private: execution order list
-    - Method: record(context): push to tape
-    - Method: backward(dLoss): walk in reverse, call backward on each layer
-    - Method: clear(): reset tape and return contexts to pool
-
-7.3 Implement TCNModel class
-    - Constructor takes config (full TCNModelConfig)
-    - Create TensorArena sized for all parameters + activations
-    - Create BufferPool
-    - Create TCNBackbone
-    - Create MultiHorizonHead
-    - Create RandomGenerator, initialize all parameters
-    - Method: forward(output, input, seqLen)
-      - backbone.forward -> take last timestep -> head.forward
-      - Return predictions
-    - Method: forwardTrain(output, input, seqLen, tape)
-      - Same as forward but records to tape
-    - Method: backward(dOutput, tape)
-      - tape.backward propagates gradients
-    - Method: getAllParameters(): return map of all param buffers
-    - Method: getAllGradients(): return map of all gradient buffers
-    - Method: zeroGradients(): zero all gradient accumulators
-    - Method: getParameterCount(): sum all parameter sizes
-
-PHASE 8: TRAINING UTILITIES
-8.1 Implement RingBuffer class
-    - Constructor takes maxLen, nFeatures
-    - Allocate data Float64Array[maxLen * nFeatures]
-    - Private: head pointer, count
-    - Method: push(features: number[])
-      - Copy to data[head * nFeatures : (head+1) * nFeatures]
-      - head = (head + 1) % maxLen
-      - count = min(count + 1, maxLen)
-    - Method: getLength(): return count
-    - Method: getWindow(output, len): copy last len timesteps to output (handling wraparound)
-    - Method: clear(): reset head and count
-
-8.2 Implement ResidualStatsTracker class
-    - Constructor takes windowSize, nTargets
-    - Create circular buffer for residuals [windowSize, nTargets]
-    - Private: head, count
-    - Method: addResidual(predicted, actual)
-      - Compute residual = actual - predicted
-      - Store in buffer
-    - Method: getStats(): compute mean, std per target over window
-    - Method: getUncertaintyBounds(predictions, multiplier)
-      - lower = predictions - multiplier * std
-      - upper = predictions + multiplier * std
-
-8.3 Implement ADWINBucket class
-    - Properties: total, variance, count
-    - Poolable object
-    - Method: add(value): update running stats
-    - Method: merge(other): combine two buckets
-
-8.4 Implement ADWINDetector class
-    - Constructor takes delta, maxBuckets
-    - Private: array of bucket levels, each level has array of ADWINBucket
-    - Method: update(value)
-      - Add to level 0 bucket
-      - Compress buckets if needed (merge pairs)
-      - Check for drift by comparing window halves
-      - Return whether drift detected
-    - Method: hasChange(): return last detection result
-    - Method: getCurrentMean(): mean over current window
-    - Method: reset(): clear all buckets
-
-8.5 Implement OutlierDownweighter class
-    - Constructor takes threshold, minWeight
-    - Method: computeWeight(error, errorStd)
-      - zScore = |error| / errorStd
-      - If zScore <= threshold: return 1.0
-      - Else: return max(minWeight, 1 / zScore)
-
-8.6 Implement MetricsAccumulator class
-    - Private: sumLoss, sumAbsError, count
-    - Method: update(loss, absError)
-    - Method: getMetrics(): return {avgLoss, mae, count}
-    - Method: reset(): zero all
-
-PHASE 9: MAIN API CLASS
-9.1 Implement TCNRegression class constructor
-    - Validate config, apply defaults
-    - Create TensorArena with computed size
-    - Create BufferPool
-    - Create WelfordNormalizer for inputs and outputs
-    - Create TCNModel with config
-    - Create AdamOptimizer, register all parameters
-    - Create RingBuffer for input sequence
-    - Create ResidualStatsTracker
-    - Create ADWINDetector if enabled
-    - Create OutlierDownweighter
-    - Create MetricsAccumulator
-    - Allocate scratch buffers for training
-
-9.2 Implement fitOnline method
-    - Signature: fitOnline({ xCoordinates, yCoordinates }): FitResult
-    - Validate input shapes
-    - Update Welford stats for x and y
-    - Normalize inputs and outputs
-    - Push normalized x to ring buffer
-    - If ring buffer has enough history (>= some minimum):
-      - Get input window from ring buffer
-      - Forward pass with tape
-      - Compute MSE loss
-      - Compute sample weight via OutlierDownweighter
-      - Scale loss by weight
-      - Add L2 regularization
-      - Backward pass
-      - Optimizer step
-      - Update ResidualStatsTracker
-      - Update ADWINDetector
-      - Update MetricsAccumulator
-    - Return FitResult {loss, sampleWeight, driftDetected, metrics}
-
-9.3 Implement predict method
-    - Signature: predict(futureSteps: number): PredictionResult
-    - Validate futureSteps <= maxFutureSteps
-    - Get current input window from ring buffer
-    - If useDirectMultiHorizon:
-      - Single forward pass
-      - Extract predictions for requested steps
-    - Else (recursive):
-      - For each future step:
-        - Forward pass
-        - Get single-step prediction
-        - Append prediction to input buffer (roll forward)
-    - Denormalize predictions
-    - Get uncertainty bounds from ResidualStatsTracker
-    - Return PredictionResult {predictions, uncertaintyLower, uncertaintyUpper, confidence}
-
-9.4 Implement getModelSummary method
-    - Build architecture description string
-    - Compute parameter counts per layer
-    - Compute total parameters
-    - Get receptive field from backbone
-    - Estimate memory usage
-    - Return ModelSummary object
-
-9.5 Implement getWeights method
-    - Iterate all parameters in model
-    - Convert Float64Array to number[] for each
-    - Include shape metadata
-    - Return nested WeightInfo object
-
-9.6 Implement getNormalizationStats method
-    - Get stats from WelfordNormalizer
-    - Return means, stds, count, warmup status
-
-9.7 Implement reset method
-    - WelfordNormalizer.reset()
-    - RingBuffer.clear()
-    - AdamOptimizer.reset()
-    - ResidualStatsTracker reset
-    - ADWINDetector.reset()
-    - MetricsAccumulator.reset()
-    - Re-initialize model parameters
-
-9.8 Implement save method
-    - Collect all state:
-      - Config
-      - WelfordNormalizer state
-      - TCNModel parameters
-      - AdamOptimizer state
-      - RingBuffer contents
-      - ResidualStatsTracker state
-      - ADWINDetector state
-      - Training step count
-    - Use SerializationHelper to convert to JSON
-    - Return JSON string
-
-9.9 Implement load method
-    - Parse JSON string
-    - Validate version compatibility
-    - Restore config
-    - Restore WelfordNormalizer state
-    - Restore TCNModel parameters
-    - Restore AdamOptimizer state
-    - Restore RingBuffer contents
-    - Restore ResidualStatsTracker
-    - Restore ADWINDetector
-    - Restore training step count
-
-PHASE 10: SERIALIZATION AND UTILITIES
-10.1 Implement SerializationHelper class
-    - Method: float64ArrayToBase64(arr): encode typed array
-    - Method: base64ToFloat64Array(str): decode to typed array
-    - Method: serialize(obj): deep convert, encode arrays
-    - Method: deserialize(json): deep convert, decode arrays
-    - Method: validateVersion(data): check compatibility
-
-10.2 Implement type definitions
-    - Export interfaces: FitResult, PredictionResult, ModelSummary, WeightInfo, NormalizationStats
-    - Export TCNRegressionConfig interface with optional fields and defaults
-
-10.3 Implement input validation utilities
-    - validateConfig(config): check all fields, apply defaults
-    - validateFitInput(x, y, config): check shapes match config
-    - validatePredictInput(futureSteps, config): check bounds
-
-PHASE 11: TESTING AND VERIFICATION
-11.1 Unit test each class in isolation
-    - TensorView indexing correctness
-    - BufferPool rent/return cycles
-    - WelfordAccumulator numerical stability
-    - CausalConv1D forward/backward gradient check
-    - Adam update correctness
-
-11.2 Integration test full forward/backward
-    - Verify gradients via finite differences
-    - Verify no allocations in hot path (monitor GC)
-    - Verify determinism with fixed seed
-
-11.3 End-to-end test fitOnline/predict
-    - Train on simple synthetic pattern
-    - Verify loss decreases
-    - Verify predictions reasonable
-    - Test save/load roundtrip
