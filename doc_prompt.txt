@@ -3,7 +3,7 @@ Info:
 - lib import: import { ConvolutionalRegression } from "jsr:@hviana/multivariate-convolutional-regression";
 - author: Henrique Emanoel Viana
 - jsr link: https://jsr.io/@hviana/multivariate-convolutional-regression
-- github link: https://github.com/hviana/polynomial-regression
+- github link: https://github.com/hviana/multivariate-convolutional-regression
 - license: MIT
 - year: 2025
 

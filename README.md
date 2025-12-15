@@ -6,7 +6,7 @@
 series regression with online learning capabilities**
 
 [📦 JSR Package](https://jsr.io/@hviana/multivariate-convolutional-regression) •
-[🐙 GitHub](https://github.com/hviana/polynomial-regression) •
+[🐙 GitHub](https://github.com/hviana/multivariate-convolutional-regression) •
 [📖 Documentation](#-table-of-contents)
 
 </div>
@@ -1147,7 +1147,7 @@ const prediction = model.predict();
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests
-on [GitHub](https://github.com/hviana/polynomial-regression).
+on [GitHub](https://github.com/hviana/multivariate-convolutional-regression).
 
 ---
 
